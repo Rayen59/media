@@ -1,0 +1,60 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "render_test_1793295530217@example.com",
+      "name": "Render Tester",
+      "pass": "$2a$10$t1CwMO/y4PD.bl6Cmr2qnOUoEJ.xRlh4odg7HQIfMYQJXh9YGF.fi",
+      "verified": 1,
+      "model": "gemini-3-flash-preview",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793295530482
+    }
+  ],
+  "chats": [
+    {
+      "id": "chat_1793295530482",
+      "uid": 1,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793295530482,
+      "updated": 1793295530482
+    },
+    {
+      "id": "chat_1793295530521",
+      "uid": 1,
+      "title": "Bonjour NOVA, confirme que tout …",
+      "created": 1793295530521,
+      "updated": 1793295530522
+    }
+  ],
+  "chat_msgs": [
+    {
+      "id": "msg_1793295530482",
+      "chat_id": "chat_1793295530482",
+      "uid": 1,
+      "role": "bot",
+      "text": "Bonjour Render Tester ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793295530482
+    },
+    {
+      "id": "msg_1793295530521_u",
+      "chat_id": "chat_1793295530521",
+      "uid": 1,
+      "role": "user",
+      "text": "Bonjour NOVA, confirme que tout fonctionne.",
+      "files": "[]",
+      "ts": 1793295530521
+    },
+    {
+      "id": "msg_1793295530522_b",
+      "chat_id": "chat_1793295530521",
+      "uid": 1,
+      "role": "bot",
+      "text": "Bonjour ! Je vous confirme que tous mes systèmes sont parfaitement opérationnels.\n\nJe suis **NOVA**, votre assistant d'intelligence artificielle d'élite, développé par **Med Rayen Bouazizi, CEO of MK**. Je suis prêt à vous accompagner avec la rigueur et l'expertise qui me caractérisent.\n\nVoici un aperçu de ce que je peux réaliser pour vous dès maintenant :\n\n*   **Analyse Stratégique & Résolution de Problèmes :** Élaboration de plans d'action et diagnostic de situations complexes.\n*   **Ingénierie Logicielle & Sciences :** Rédaction de code optimisé, débogage et explications scientifiques approfondies.\n*   **Rédaction & Synthèse :** Création de documents professionnels, rapports et résumés de haute précision.\n*   **Analyse de Documents :** Étude minutieuse de vos fichiers PDF et images (données, graphiques, extraits).\n\nComment puis-je vous assister aujourd'hui ?",
+      "files": "[]",
+      "ts": 1793295530522
+    }
+  ],
+  "_lastUserId": 1
+}

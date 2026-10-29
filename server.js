@@ -1,5 +1,5 @@
 const express = require('express');
-const Database = require('better-sqlite3');
+const Database = require('./db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie-parser');
