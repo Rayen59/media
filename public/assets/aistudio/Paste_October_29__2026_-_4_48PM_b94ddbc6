@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NOVA — Assistant IA</title>
+<style>
+:root{--bg:#fff;--fg:#0a0a0a;--mut:#6b6b6b;--line:#e4e4e4;--card:#f5f5f5;--inv:#0a0a0a;--invfg:#fff;--a4w:794px;--a4h:1123px;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--fg:#f5f5f5;--mut:#8a8a8a;--line:#222;--card:#0f0f0f;--inv:#fff;--invfg:#000;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--fg:#f5f5f5;--mut:#8a8a8a;--line:#222;--card:#0f0f0f;--inv:#fff;--invfg:#000;color-scheme:dark}
+:root[data-theme="light"]{--bg:#fff;--fg:#0a0a0a;--mut:#6b6b6b;--line:#e4e4e4;--card:#f5f5f5;--inv:#0a0a0a;--invfg:#fff;color-scheme:light}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+.hide{display:none!important}
+/* INTRO */
+#intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;background:var(--bg);z-index:100}
+#cv{position:absolute;inset:0;width:100%;height:100%}
+#intro::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 20%,var(--bg) 85%);pointer-events:none}
+.wrap{position:relative;z-index:2;width:100%;max-width:400px;text-align:center}
+.logo{font-size:clamp(44px,12vw,72px);font-weight:800;letter-spacing:.35em;padding-left:.35em;display:flex;justify-content:center}
+.logo span{opacity:0;transform:translateY(30px) scale(.8);filter:blur(10px);animation:rise .9s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes rise{to{opacity:1;transform:none;filter:none}}
+.tag{color:var(--mut);letter-spacing:.25em;font-size:11px;text-transform:uppercase;margin:10px 0 26px;opacity:0;animation:rise 1s 1.2s forwards}
+.card{background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:18px;padding:22px;text-align:left;opacity:0;transform:translateY(24px);animation:rise 1s 1.6s forwards}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+.tabs button{padding:9px;border-radius:9px;font-size:14px;color:var(--mut);transition:.25s}
+.tabs button.on{background:var(--inv);color:var(--invfg);font-weight:600}
+.f{display:block;margin-bottom:12px}
+.f small{display:block;color:var(--mut);font-size:12px;margin-bottom:5px}
+.f input,.f select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;outline:0;transition:.2s}
+.f input:focus,.f select:focus{border-color:var(--fg);box-shadow:0 0 0 3px color-mix(in srgb,var(--fg) 12%,transparent)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--mut);margin:14px 0;line-height:1.45}
+.chk input{margin-top:3px;accent-color:var(--inv);width:16px;height:16px;flex:none}
+.chk a{color:var(--fg);text-decoration:underline;cursor:pointer}
+.btn{width:100%;background:var(--inv);color:var(--invfg);border-radius:12px;padding:13px;font-weight:700;font-size:15px;transition:.2s}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.err{color:var(--fg);font-size:13px;margin-top:10px;min-height:18px;text-align:center;border-left:2px solid var(--fg);padding-left:8px;display:none}
+.err.on{display:block}
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
+.mbox{background:var(--bg);border:1px solid var(--line);border-radius:18px;max-width:520px;width:100%;max-height:85%;display:flex;flex-direction:column;animation:rise .4s forwards}
+.mbox h3{padding:20px 22px 8px;font-size:18px}
+.mbody{padding:0 22px;overflow:auto;font-size:14px;line-height:1.6;color:var(--mut)}
+.mbody b{color:var(--fg);display:block;margin-top:12px}
+.mbox .btn{margin:18px 22px 22px;width:auto}
+/* APP */
+#app{position:fixed;inset:0;display:flex;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#side{width:290px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--card);transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:30;position:relative}
+.sh{padding:16px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;letter-spacing:.3em;font-size:16px}
+.ib{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);transition:.2s;flex:none}
+.ib:hover{background:var(--inv);color:var(--invfg)}
+.ib svg,.send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.newc{margin:0 16px 12px;padding:11px;border-radius:12px;background:var(--inv);color:var(--invfg);font-weight:700;font-size:14px}
+#hist{flex:1;overflow:auto;padding:0 10px}
+.hi{display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:10px;font-size:14px;cursor:pointer;color:var(--mut);animation:rise .4s forwards;opacity:0}
+.hi span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hi:hover,.hi.on{background:var(--bg);color:var(--fg)}
+.hi button{opacity:.5;font-size:16px;width:24px}
+.hi button:hover{opacity:1}
+.su{padding:14px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;font-size:14px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--inv);color:var(--invfg);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.su div{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.top h2{font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#burger{display:none}
+#msgs{flex:1;overflow:auto;padding:24px 16px;scroll-behavior:smooth}
+.in{max-width:760px;margin:0 auto}
+.empty{text-align:center;margin-top:12vh}
+.empty .logo{font-size:40px;margin-bottom:12px}
+.empty p{color:var(--mut);font-size:15px}
+.sug{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
+.sug button{border:1px solid var(--line);border-radius:20px;padding:9px 15px;font-size:13px;color:var(--mut);transition:.2s}
+.sug button:hover{background:var(--inv);color:var(--invfg)}
+.m{display:flex;gap:12px;margin-bottom:22px;animation:rise .5s forwards;opacity:0}
+.m.u{flex-direction:row-reverse}
+.m .av{width:30px;height:30px;font-size:12px}
+.m.b .av{background:var(--bg);color:var(--fg);border:1px solid var(--fg)}
+.bub{max-width:82%;position:relative}
+.txt{padding:11px 15px;border-radius:16px;font-size:15px;line-height:1.55;white-space:pre-wrap;word-wrap:break-word}
+.u .txt{background:var(--inv);color:var(--invfg);border-bottom-right-radius:4px}
+.b .txt{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+.att{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.att img{max-width:220px;max-height:180px;border-radius:12px;border:1px solid var(--line)}
+.att .fl{border:1px solid var(--line);border-radius:10px;padding:7px 11px;font-size:12px;background:var(--card);color:var(--fg)}
+.del{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:1px solid var(--line);font-size:12px;opacity:0;transition:.2s}
+.u .del{right:auto;left:-8px}
+.m:hover .del{opacity:1}
+@media (hover:none){.del{opacity:.8}}
+.dots span{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:var(--fg);animation:bn 1s infinite}
+.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bn{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-6px);opacity:1}}
+.comp{padding:10px 16px 16px}
+.cbox{max-width:760px;margin:0 auto;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:10px;transition:.2s}
+.cbox:focus-within{border-color:var(--fg)}
+#chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 4px}
+#chips:not(:empty){margin-bottom:8px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:4px 8px;font-size:12px;max-width:180px}
+.chip img{width:26px;height:26px;border-radius:6px;object-fit:cover}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{font-size:14px;color:var(--mut)}
+.row{display:flex;align-items:flex-end;gap:6px}
+#inp{flex:1;background:none;border:0;outline:0;resize:none;max-height:140px;padding:9px 6px;font-size:15px;line-height:1.4}
+.ib{border:0}
+.send{width:38px;height:38px;border-radius:12px;background:var(--inv);color:var(--invfg);display:flex;align-items:center;justify-content:center;flex:none;transition:.2s}
+.send:hover{transform:scale(1.07)}
+.rec{background:var(--inv)!important;color:var(--invfg)!important;animation:pl 1.1s infinite}
+@keyframes pl{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--fg) 50%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.note{text-align:center;font-size:11px;color:var(--mut);margin-top:8px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--inv);color:var(--invfg);padding:10px 18px;border-radius:12px;font-size:13px;z-index:999;opacity:0;pointer-events:none;transition:.3s}
+#toast.on{opacity:1}
+/* A4 OVERLAY */
+#a4{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.a4-wrap{position:relative;background:var(--bg);border-radius:12px;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);max-width:95vw;max-height:95vh;width:var(--a4w);height:var(--a4h);min-width:320px;border:1px solid var(--line)}
+.a4-header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--bg);border-bottom:1px solid var(--line);z-index:2}
+.a4-header h3{font-size:16px;letter-spacing:.2em;font-weight:800}
+.a4-body{padding:24px;font-size:14px;line-height:1.7;color:var(--fg)}
+.a4-page{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:16px;min-height:200px}
+.a4-close{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;transition:.2s}
+.a4-close:hover{background:var(--inv);color:var(--invfg)}
+/* Bluetooth device item */
+.dev{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--bg);transition:.2s;animation:rise .4s forwards;opacity:0}
+.dev:hover{border-color:var(--fg)}
+.dev .ic{width:40px;height:40px;border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid var(--line)}
+.dev .info{flex:1}
+.dev .info b{display:block;font-size:14px}
+.dev .info small{color:var(--mut);font-size:12px}
+.dev .st{font-size:11px;padding:3px 8px;border-radius:8px;background:var(--card);color:var(--mut);border:1px solid var(--line)}
+.dev .st.on{background:var(--inv);color:var(--invfg);border-color:var(--inv)}
+.dev button{font-size:13px;padding:7px 14px;border-radius:9px;border:1px solid var(--line);transition:.2s}
+.dev button:hover{background:var(--inv);color:var(--invfg)}
+/* Settings page */
+.settings{position:fixed;inset:0;z-index:150;background:var(--bg);overflow:auto;padding:20px;animation:fadeIn .3s}
+.settings-inner{max-width:640px;margin:0 auto}
+.settings h2{font-size:22px;font-weight:800;letter-spacing:.15em;margin-bottom:20px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+.sec h3{font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:12px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;gap:12px}
+.set-row:last-child{border-bottom:0}
+.set-row small{display:block;color:var(--mut);font-size:12px;margin-top:3px}
+.set-row .val{color:var(--mut);font-size:13px}
+.toggle{width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:.2s;flex:none;cursor:pointer}
+.toggle.on{background:var(--inv)}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--bg);transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(18px)}
+.sel{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px}
+.btn-s{background:var(--inv);color:var(--invfg);border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600}
+.btn-o{background:none;border:1px solid var(--line);border-radius:10px;padding:9px 16px;font-size:13px}
+.btn-o:hover{background:var(--inv);color:var(--invfg)}
+/* BLUETOOTH SCANNER */
+#btPanel{position:fixed;inset:0;z-index:180;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .3s}
+.bt-box{background:var(--bg);border:1px solid var(--line);border-radius:20px;max-width:480px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.bt-h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.bt-h h3{flex:1;font-size:16px;font-weight:700}
+.bt-scan{width:100%;padding:14px;background:var(--inv);color:var(--invfg);font-weight:700;font-size:14px;letter-spacing:.05em}
+.bt-list{padding:14px;overflow:auto;flex:1}
+.scanning{text-align:center;padding:30px;color:var(--mut)}
+.pulse{width:60px;height:60px;border-radius:50%;border:2px solid var(--fg);margin:0 auto 16px;animation:pl2 1.5s infinite}
+@keyframes pl2{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.6);opacity:0}}
+@media(max-width:760px){
+#side{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);width:82%;max-width:320px;padding-top:env(safe-area-inset-top,0px)}
+#side.open{transform:none}
+#burger{display:inline-flex}
+.bub{max-width:88%}
+.a4-wrap{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0}
+}
+</style>
+</head>
+<body>
+
+<section id="intro">
+<canvas id="cv"></canvas>
+<div class="wrap">
+  <div class="logo" id="logo"></div>
+  <div class="tag">Intelligence artificielle · Nouvelle génération</div>
+  <div class="card">
+    <div class="tabs"><button id="tL" class="on">Connexion</button><button id="tS">Créer un compte</button></div>
+    <label class="f hide" id="fN"><small>Nom complet</small><input id="name" autocomplete="name" placeholder="Votre nom"></label>
+    <label class="f"><small>Adresse e-mail</small><input id="email" type="email" autocomplete="email" placeholder="vous@exemple.com"></label>
+    <label class="f"><small>Mot de passe</small><input id="pass" type="password" autocomplete="current-password" placeholder="••••••••"></label>
+    <label class="chk"><input type="checkbox" id="ok"><span>J’ai lu et j’accepte les <a id="pv">règles de confidentialité</a> et les conditions d’utilisation.</span></label>
+    <button class="btn" id="go" disabled>Se connecter</button>
+    <div class="err" id="err"></div>
+  </div>
+</div>
+</section>
+
+<div class="modal hide" id="modal"><div class="mbox">
+<h3>Règles de confidentialité</h3>
+<div class="mbody">
+<b>1. Données collectées</b>Nom, adresse e-mail et contenu de vos conversations, uniquement pour faire fonctionner le service.
+<b>2. Stockage</b>Vos conversations et fichiers joints sont conservés localement sur votre appareil. Vous pouvez les supprimer à tout moment.
+<b>3. Partage</b>Vos données ne sont ni vendues ni partagées avec des tiers à des fins publicitaires.
+<b>4. Micro et fichiers</b>Le micro, les photos et les fichiers ne sont utilisés que lorsque vous les activez ou les joignez vous-même.
+<b>5. Vos droits</b>Accès, rectification et suppression de vos données à tout moment, y compris la suppression de votre historique.
+<b>6. Sécurité</b>Les mots de passe sont chiffrés (SHA-256) avant enregistrement. Ne partagez jamais d’informations sensibles dans le chat.
+<b>7. Contenu IA</b>Les réponses d’une IA peuvent contenir des erreurs : vérifiez les informations importantes.
+</div>
+<button class="btn" id="mc">J’ai compris</button>
+</div></div>
+
+<div id="app" class="hide">
+<aside id="side">
+  <div class="sh"><div class="brand">NOVA</div>
+    <div style="display:flex;gap:6px">
+      <button class="ib" id="theme" title="Thème"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg></button>
+      <button class="ib" id="btnSettings" title="Paramètres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    </div>
+  </div>
+  <button class="newc" id="newc">+ Nouvelle conversation</button>
+  <div id="hist"></div>
+  <div class="su"><div class="av" id="uav"></div><div id="uname"></div>
+    <button class="ib" id="btBtn" title="Appareils Bluetooth"><svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/></svg></button>
+    <button class="ib" id="out" title="Déconnexion"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+  </div>
+</aside>
+<main id="main">
+  <div class="top"><button class="ib" id="burger"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <h2 id="ttl">Nouvelle conversation</h2>
+  <button class="ib" id="a4Btn" title="Vue A4"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h5"/></svg></button>
+  <button class="ib" id="clr" title="Supprimer cette conversation"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+  </div>
+  <div id="msgs"><div class="in" id="list"></div></div>
+  <div class="comp"><div class="cbox">
+    <div id="chips"></div>
+    <div class="row">
+      <button class="ib" id="bImg" title="Joindre une photo"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
+      <button class="ib" id="bFile" title="Joindre un fichier"><svg viewBox="0 0 24 24"><path d="M21 12l-9 9a6 6 0 01-9-9l9-9a4 4 0 016 6l-9 9a2 2 0 01-3-3l8-8"/></svg></button>
+      <textarea id="inp" rows="1" placeholder="Écrivez votre message…"></textarea>
+      <button class="ib" id="mic" title="Message vocal"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/></svg></button>
+      <button class="send" id="send"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+    </div>
+  </div><div class="note">NOVA peut faire des erreurs. Vérifiez les informations importantes.</div></div>
+</main>
+</div>
+
+<!-- A4 VIEW -->
+<div id="a4" class="hide">
+  <div class="a4-wrap">
+    <div class="a4-header"><h3>NOVA · VUE A4</h3><button class="a4-close" id="a4Close">✕</button></div>
+    <div class="a4-body" id="a4Body"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings" class="hide settings">
+  <div class="settings-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2>PARAMÈTRES</h2>
+      <button class="btn-o" id="setClose">Fermer</button>
+    </div>
+
+    <div class="sec">
+      <h3>Compte</h3>
+      <div class="set-row"><div><b>Nom</b><small>Nom affiché dans l’application</small></div><span class="val" id="setName">—</span></div>
+      <div class="set-row"><div><b>E-mail</b><small>Identifiant de connexion</small></div><span class="val" id="setEmail">—</span></div>
+      <div class="set-row"><div><b>Mot de passe</b><small>Changer votre mot de passe</small></div><button class="btn-o" id="btnChangePw">Changer</button></div>
+    </div>
+
+    <div class="sec">
+      <h3>Apparence</h3>
+      <div class="set-row"><div><b>Thème</b><small>Clair ou sombre</small></div>
+        <select class="sel" id="setTheme"><option value="dark">Sombre</option><option value="light">Clair</option></select></div>
+      <div class="set-row"><div><b>Vue par défaut</b><small>Format d’affichage</small></div>
+        <select class="sel" id="setView"><option value="chat">Chat</option><option value="a4">A4</option></select></div>
+    </div>
+
+    <div class="sec">
+      <h3>Interface</h3>
+      <div class="set-row"><div><b>Animations</b><small>Activer les animations</small></div><div class="toggle on" id="setAnim"></div></div>
+      <div class="set-row"><div><b>Fermeture auto du panneau</b><small>Clic extérieur</small></div><div class="toggle on" id="setAutoClose"></div></div>
+      <div class="set-row"><div><b>Indicateur de frappe</b><small>Afficher les points</small></div><div class="toggle on" id="setTyping"></div></div>
+    </div>
+
+    <div class="sec">
+      <h3>Bluetooth</h3>
+      <div class="set-row"><div><b>Recherche automatique</b><small>Scanner au démarrage</small></div><div class="toggle" id="setBtAuto"></div></div>
+      <div class="set-row"><div><b>Appareils connectés</b><small>Gérer les appareils</small></div><button class="btn-o" id="btnBTManage">Gérer</button></div>
+    </div>
+
+    <div class="sec">
+      <h3>Avancé</h3>
+      <div class="set-row"><div><b>Vitesse de réponse</b><small>Délai de frappe</small></div>
+        <select class="sel" id="setSpeed"><option value="rapide">Rapide</option><option value="normal" selected>Normal</option><option value="lent">Lent</option></select></div>
+      <div class="set-row"><div><b>Mode compact</b><small>Réduire les espacements</small></div><div class="toggle" id="setCompact"></div></div>
+      <div class="set-row"><div><b>Export des données</b><small>Télécharger votre historique</small></div><button class="btn-o" id="btnExport">Exporter</button></div>
+      <div class="set-row"><div><b>Réinitialiser</b><small>Effacer toutes les conversations</small></div><button class="btn-o" id="btnReset" style="color:#e55">Effacer</button></div>
+    </div>
+
+    <div class="sec">
+      <h3>Très avancé</h3>
+      <div class="set-row"><div><b>Modèle IA</b><small>Sélection du moteur</small></div>
+        <select class="sel" id="setModel"><option value="nova-pro">NOVA Pro</option><option value="nova-fast">NOVA Fast</option><option value="nova-creative">NOVA Creative</option></select></div>
+      <div class="set-row"><div><b>Température</b><small>Créativité (0–2)</small></div><input class="sel" type="number" id="setTemp" min="0" max="2" step="0.1" value="0.7" style="width:80px"></div>
+      <div class="set-row"><div><b>Tokens max</b><small>Longueur max des réponses</small></div><input class="sel" type="number" id="setTokens" min="128" max="8192" step="64" value="2048" style="width:100px"></div>
+      <div class="set-row"><div><b>Mode développeur</b><small>Infos techniques</small></div><div class="toggle" id="setDev"></div></div>
+      <div class="set-row"><div><b>Logs console</b><small>Afficher les événements</small></div><div class="toggle" id="setLogs"></div></div>
+      <div class="set-row"><div><b>Fonction expérimentale</b><small>Réponses en streaming accéléré</small></div><div class="toggle" id="setStream"></div></div>
+    </div>
+
+    <div class="sec">
+      <h3>À propos</h3>
+      <div class="set-row"><div><b>Version</b><small>NOVA v2.0.0</small></div><span class="val">2026</span></div>
+      <div class="set-row"><div><b>Stockage</b><small>Utilisation locale</small></div><span class="val" id="setStorage">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- BLUETOOTH PANEL -->
+<div id="btPanel" class="hide">
+  <div class="bt-box">
+    <div class="bt-h">
+      <button class="ib" id="btClose" style="border:0">✕</button>
+      <h3>Appareils Bluetooth</h3>
+      <button class="ib" id="btRefresh" title="Actualiser"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg></button>
+    </div>
+    <button class="bt-scan" id="btScan">Rechercher des appareils</button>
+    <div class="bt-list" id="btList">
+      <div class="scanning" id="btIdle"><p style="margin-top:12px">Appuyez sur « Rechercher » pour découvrir les appareils à proximité.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGEMENT MOT DE PASSE -->
+<div class="modal hide" id="pwModal"><div class="mbox">
+  <h3>Changer de mot de passe</h3>
+  <div class="mbody" style="padding-bottom:8px">
+    <label class="f"><small>Mot de passe actuel</small><input type="password" id="oldPw" placeholder="••••••••"></label>
+    <label class="f"><small>Nouveau mot de passe</small><input type="password" id="newPw" placeholder="••••••••"></label>
+    <label class="f"><small>Confirmer</small><input type="password" id="newPw2" placeholder="••••••••"></label>
+    <div class="err" id="pwErr" style="text-align:left;border-left:2px solid var(--fg)"></div>
+  </div>
+  <div style="display:flex;gap:10px;padding:0 22px 22px">
+    <button class="btn" id="pwCancel" style="flex:1;background:var(--card);color:var(--fg);border:1px solid var(--line)">Annuler</button>
+    <button class="btn" id="pwSave" style="flex:1">Enregistrer</button>
+  </div>
+</div></div>
+
+<input type="file" id="fImg" accept="image/*" multiple class="hide">
+<input type="file" id="fAny" multiple class="hide">
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const st = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true }catch(e){ return false } },
+  del(k){ try{ localStorage.removeItem(k) }catch(e){} }
+};
+function toast(t){ const e=$('#toast'); e.textContent=t; e.classList.add('on'); setTimeout(()=>e.classList.remove('on'),2400) }
+
+// ===== SETTINGS STATE =====
+let SETTINGS = st.get('nova_settings') || {
+  theme:'dark', view:'chat', anim:true, autoClose:true, typing:true,
+  btAuto:false, speed:'normal', compact:false,
+  model:'nova-pro', temp:0.7, tokens:2048, dev:false, logs:false, stream:false
+};
+// backward compat
+if(SETTINGS.btAuto === undefined && SETTINGS.btauto !== undefined) SETTINGS.btAuto = SETTINGS.btauto;
+function saveSettings(){ st.set('nova_settings', SETTINGS) }
+
+// ===== APPLY SETTINGS =====
+function applySettings(){
+  document.documentElement.dataset.theme = SETTINGS.theme;
+  // toggles
+  const toggleMap = {
+    setAnim: SETTINGS.anim,
+    setAutoClose: SETTINGS.autoClose,
+    setTyping: SETTINGS.typing,
+    setBtAuto: SETTINGS.btAuto,
+    setCompact: SETTINGS.compact,
+    setDev: SETTINGS.dev,
+    setLogs: SETTINGS.logs,
+    setStream: SETTINGS.stream
+  };
+  Object.keys(toggleMap).forEach(id => {
+    const el = $('#'+id);
+    if(el) el.classList.toggle('on', !!toggleMap[id]);
+  });
+  // selects / inputs
+  const set = (sel, v) => { const e=$(sel); if(e) e.value = v; };
+  set('#setTheme', SETTINGS.theme);
+  set('#setView', SETTINGS.view);
+  set('#setSpeed', SETTINGS.speed);
+  set('#setModel', SETTINGS.model);
+  set('#setTemp', SETTINGS.temp);
+  set('#setTokens', SETTINGS.tokens);
+}
+
+// ===== THEME BTN =====
+$('#theme').onclick = () => {
+  SETTINGS.theme = SETTINGS.theme === 'dark' ? 'light' : 'dark';
+  saveSettings(); applySettings();
+  toast('Thème ' + (SETTINGS.theme === 'dark' ? 'sombre' : 'clair'));
+};
+
+// ===== LOGO ANIM =====
+'NOVA'.split('').forEach((c,i)=>{
+  const s=document.createElement('span'); s.textContent=c; s.style.animationDelay=(.2+i*.18)+'s'; $('#logo').appendChild(s);
+});
+
+// ===== CANVAS =====
+const cv=$('#cv'),cx=cv.getContext('2d');
+let W,H,pts=[],mx=0,my=0,run=true;
+function rs(){ const r=devicePixelRatio||1; W=cv.width=innerWidth*r; H=cv.height=innerHeight*r; cx.setTransform(1,0,0,1,0,0); }
+addEventListener('resize', rs); rs();
+for(let i=0;i<900;i++){ const y=1-2*(i+.5)/900, r=Math.sqrt(1-y*y), a=i*2.399963; pts.push([Math.cos(a)*r,y,Math.sin(a)*r]); }
+addEventListener('pointermove', e=>{ mx=(e.clientX/innerWidth-.5); my=(e.clientY/innerHeight-.5); });
+function draw(t){
+  if(!run) return;
+  t *= .001;
+  const fg = getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() || '#fff';
+  cx.clearRect(0,0,W,H);
+  const R = Math.min(W,H) * (.2 + Math.min(t,2.5)*.06);
+  const ry = t*.35 + mx*2, rx = my*1.2 + .3;
+  const cy1=Math.cos(ry), sy=Math.sin(ry), cx1=Math.cos(rx), sx=Math.sin(rx);
+  cx.fillStyle = fg;
+  const out = [];
+  for(const p of pts){
+    let x=p[0]*cy1+p[2]*sy, z=-p[0]*sy+p[2]*cy1, y=p[1]*cx1-z*sx; z=p[1]*sx+z*cx1;
+    const w = 1 + .12*Math.sin(p[1]*7+t*2.2)*Math.sin(p[0]*5-t*1.6);
+    const s = 1/(1.8-z*.5);
+    out.push([W/2+x*R*w*s*1.4, H*.42+y*R*w*s*1.4, z, s]);
+  }
+  for(const o of out){ cx.globalAlpha=Math.max(.08,(o[2]+1)/2*.9); cx.beginPath(); cx.arc(o[0],o[1],(o[3]*1.6)*(devicePixelRatio||1),0,7); cx.fill(); }
+  cx.globalAlpha=.07; cx.strokeStyle=fg; cx.lineWidth=1;
+  for(let i=0;i<out.length;i+=6) for(let j=i+6;j<Math.min(i+60,out.length);j+=6){
+    const a=out[i], b=out[j];
+    if(Math.hypot(a[0]-b[0], a[1]-b[1]) < R*.28){ cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.stroke(); }
+  }
+  for(let k=0;k<3;k++){
+    const p = ((t*.25+k/3)%1);
+    cx.globalAlpha = (1-p)*.25;
+    cx.beginPath(); cx.arc(W/2,H*.42,R*(.6+p*1.6),0,7); cx.stroke();
+  }
+  cx.globalAlpha=1;
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+// ===== AUTH =====
+let mode='L';
+const ok=$('#ok'), go=$('#go');
+function setMode(m){
+  mode=m;
+  $('#tL').classList.toggle('on', m==='L');
+  $('#tS').classList.toggle('on', m==='S');
+  $('#fN').classList.toggle('hide', m==='L');
+  go.textContent = m==='L' ? 'Se connecter' : 'Créer mon compte';
+  $('#err').classList.remove('on');
+}
+$('#tL').onclick = () => setMode('L');
+$('#tS').onclick = () => setMode('S');
+ok.onchange = () => go.disabled = !ok.checked;
+$('#pv').onclick = () => $('#modal').classList.remove('hide');
+$('#mc').onclick = () => $('#modal').classList.add('hide');
+function err(m){ const e=$('#err'); e.textContent=m; e.classList.add('on'); }
+async function hash(s){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('nova:'+s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+go.onclick = async () => {
+  const em = $('#email').value.trim().toLowerCase(), pw = $('#pass').value, nm = $('#name').value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(em)) return err('Adresse e-mail invalide.');
+  if(pw.length < 6) return err('Le mot de passe doit contenir au moins 6 caractères.');
+  if(!ok.checked) return err('Vous devez accepter les règles de confidentialité.');
+  let users = st.get('nova_users') || {};
+  const h = await hash(pw);
+  if(mode === 'S'){
+    if(!nm) return err('Veuillez indiquer votre nom.');
+    if(users[em]) return err('Un compte existe déjà avec cet e-mail.');
+    users[em] = { name:nm, h }; st.set('nova_users', users);
+  } else {
+    if(!users[em] || users[em].h !== h) return err('E-mail ou mot de passe incorrect.');
+  }
+  st.set('nova_session', em);
+  enter(em, users[em].name);
+};
+['email','pass','name'].forEach(i => $('#'+i).addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !go.disabled) go.click();
+}));
+
+// ===== APP =====
+let me, D, cur, pending = [];
+function save(){
+  if(!st.set('d_'+me, D)){
+    D.chats.forEach(c => c.msgs.forEach(m => m.files && m.files.forEach(f => delete f.url)));
+    st.set('d_'+me, D);
+  }
+}
+function enter(em, name){
+  me = em;
+  D = st.get('d_'+em) || { chats:[] };
+  if(!D.chats) D.chats = [];
+  $('#uname').textContent = name;
+  $('#uav').textContent = name[0].toUpperCase();
+  const i = $('#intro');
+  i.style.transition = 'opacity .7s, transform .7s';
+  i.style.opacity = 0; i.style.transform = 'scale(1.05)';
+  setTimeout(() => {
+    i.classList.add('hide');
+    run = false;
+    $('#app').classList.remove('hide');
+    cur = D.chats[0] ? D.chats[0].id : null;
+    if(!cur) newChat(); else renderAll();
+    applySettings();
+    updateSettingsInfo();
+    if(SETTINGS.btAuto) setTimeout(() => startScan(true), 800);
+  }, 650);
+}
+function newChat(){
+  const c = { id: Date.now()+''+Math.random(), title:'Nouvelle conversation', msgs:[] };
+  D.chats.unshift(c); cur = c.id; save(); renderAll(); closeSide();
+}
+const chat = () => D.chats.find(c => c.id === cur);
+function renderHist(){
+  const h = $('#hist'); h.innerHTML = '';
+  D.chats.forEach((c,i) => {
+    const d = document.createElement('div');
+    d.className = 'hi' + (c.id===cur?' on':'');
+    d.style.animationDelay = i*.04 + 's';
+    const s = document.createElement('span'); s.textContent = c.title;
+    const b = document.createElement('button'); b.textContent = '×'; b.title = 'Supprimer';
+    b.onclick = (e) => { e.stopPropagation(); delChat(c.id); };
+    d.onclick = () => { cur = c.id; renderAll(); closeSide(); };
+    d.append(s, b); h.appendChild(d);
+  });
+}
+function delChat(id){
+  D.chats = D.chats.filter(c => c.id !== id);
+  if(!D.chats.length){ newChat(); return; }
+  if(cur === id) cur = D.chats[0].id;
+  save(); renderAll();
+}
+$('#clr').onclick = () => delChat(cur);
+$('#newc').onclick = newChat;
+$('#burger').onclick = (e) => {
+  e.stopPropagation();
+  $('#side').classList.toggle('open');
+};
+$('#out').onclick = () => { st.del('nova_session'); location.reload(); };
+
+// ===== PANEL AUTO-CLOSE (fix) =====
+// Ferme le panneau uniquement si le clic est vraiment en dehors du panneau et des boutons concernés
+document.addEventListener('click', (e) => {
+  const side = $('#side');
+  if(!side.classList.contains('open')) return;
+  if(innerWidth > 760) return;
+  // Si clic sur burger, ne pas fermer (le burger toggle)
+  if($('#burger').contains(e.target)) return;
+  // Si clic sur un bouton qui ouvre un panneau, ne pas fermer
+  if($('#theme').contains(e.target)) return;
+  if($('#btnSettings').contains(e.target)) return;
+  if($('#btBtn').contains(e.target)) return;
+  if($('#newc').contains(e.target)) return;
+  // Si clic dans le side, ne pas fermer
+  if(side.contains(e.target)) return;
+  // Sinon fermer
+  closeSide();
+});
+function closeSide(){ $('#side').classList.remove('open'); }
+addEventListener('resize', () => { if(innerWidth > 760) closeSide(); });
+
+// ===== MESSAGES =====
+function msgEl(m){
+  const w = document.createElement('div');
+  w.className = 'm ' + (m.role==='user'?'u':'b');
+  const a = document.createElement('div'); a.className='av';
+  a.textContent = m.role==='user' ? $('#uav').textContent : 'N';
+  const b = document.createElement('div'); b.className='bub';
+  if(m.files && m.files.length){
+    const at = document.createElement('div'); at.className='att';
+    m.files.forEach(f => {
+      if(f.url && f.type.startsWith('image/')){ const im=document.createElement('img'); im.src=f.url; at.appendChild(im); }
+      else { const x=document.createElement('div'); x.className='fl'; x.textContent='📎 '+f.name; at.appendChild(x); }
+    });
+    b.appendChild(at);
+  }
+  if(m.text){ const t=document.createElement('div'); t.className='txt'; t.textContent=m.text; b.appendChild(t); }
+  const d = document.createElement('button'); d.className='del'; d.textContent='×'; d.title='Supprimer le message';
+  d.onclick = () => {
+    w.style.transition='.3s'; w.style.opacity=0; w.style.transform='translateX(20px)';
+    setTimeout(() => {
+      const c = chat(); c.msgs = c.msgs.filter(x=>x.id!==m.id); save(); renderAll();
+    }, 280);
+  };
+  b.appendChild(d); w.append(a,b);
+  return w;
+}
+function renderMsgs(){
+  const l = $('#list'), c = chat();
+  l.innerHTML = '';
+  $('#ttl').textContent = c.title;
+  if(!c.msgs.length){
+    l.innerHTML = '<div class="empty"><div class="logo" style="font-size:40px"><span style="animation:none;opacity:1;transform:none;filter:none">NOVA</span></div><p>Comment puis-je vous aider aujourd’hui ?</p><div class="sug"></div></div>';
+    ['Explique-moi l’IA simplement','Écris un e-mail professionnel','Idées de projet innovant'].forEach(s => {
+      const b = document.createElement('button'); b.textContent = s;
+      b.onclick = () => { $('#inp').value = s; send(); };
+      l.querySelector('.sug').appendChild(b);
+    });
+    return;
+  }
+  c.msgs.forEach(m => l.appendChild(msgEl(m)));
+  scrollD();
+}
+function renderAll(){ renderHist(); renderMsgs(); }
+function scrollD(){ const m=$('#msgs'); m.scrollTop = m.scrollHeight; }
+
+// ===== A4 VIEW =====
+$('#a4Btn').onclick = () => { renderA4(); $('#a4').classList.remove('hide'); };
+$('#a4Close').onclick = () => $('#a4').classList.add('hide');
+function renderA4(){
+  const c = chat(), body = $('#a4Body');
+  if(!c || !c.msgs.length){
+    body.innerHTML = '<div class="a4-page"><p style="color:var(--mut);text-align:center;padding:60px 0">Aucun message dans cette conversation.</p></div>';
+    return;
+  }
+  let html = '';
+  c.msgs.forEach(m => {
+    html += '<div class="a4-page">';
+    html += '<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:10px">' + (m.role==='user'?'Vous':'NOVA') + '</div>';
+    if(m.files && m.files.length){
+      m.files.forEach(f => {
+        if(f.url && f.type.startsWith('image/')) html += '<img src="'+f.url+'" style="max-width:100%;border-radius:8px;margin-bottom:8px;border:1px solid var(--line)">';
+        else html += '<div style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12px;margin-bottom:8px">📎 '+f.name+'</div>';
+      });
+    }
+    if(m.text) html += '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+    html += '</div>';
+  });
+  body.innerHTML = html;
+}
+
+// ===== RESPONSES =====
+const R = [
+  [/bonjour|salut|hello|coucou/i,'Bonjour ! Ravi de vous retrouver. Sur quoi souhaitez-vous travailler aujourd’hui ?'],
+  [/e-?mail|mail/i,'Voici une base :\n\nObjet : Proposition de collaboration\n\nBonjour,\n\nJe me permets de vous contacter afin de vous présenter notre projet. Seriez-vous disponible pour un échange cette semaine ?\n\nCordialement'],
+  [/ia|intelligence/i,'Une IA apprend à partir de très nombreux exemples pour repérer des motifs, puis les utilise pour comprendre vos demandes et y répondre. Imaginez un assistant qui a beaucoup lu et qui s’adapte à votre question.'],
+  [/idée|projet/i,'Trois pistes :\n1. Un assistant vocal pour les personnes âgées.\n2. Une application qui résume vos documents.\n3. Un tableau de bord personnel qui automatise vos tâches répétitives.'],
+  [/merci/i,'Avec plaisir ! N’hésitez pas si vous avez d’autres questions.'],
+  [/bluetooth/i,'Le Bluetooth est une technologie sans fil à courte portée. Utilisez le bouton Bluetooth (icône dans le pied du panneau) pour rechercher et lier des appareils à proximité.']
+];
+function reply(txt, files){
+  if(files && files.length && !txt) return 'J’ai bien reçu ' + files.length + ' pièce(s) jointe(s). Que souhaitez-vous que j’en fasse ?';
+  for(const r of R) if(r[0].test(txt)) return r[1];
+  return 'Bonne question. Voici ma lecture : « ' + txt.slice(0,80) + (txt.length>80?'…':'') + ' ». Pouvez-vous préciser votre objectif pour que je vous donne une réponse plus utile ?';
+}
+let busy = false;
+function send(){
+  if(busy) return;
+  const i = $('#inp'), txt = i.value.trim();
+  if(!txt && !pending.length) return;
+  const c = chat(), files = pending.map(f => ({ name:f.name, type:f.type, url:f.url }));
+  c.msgs.push({ id:Date.now()+'u', role:'user', text:txt, files });
+  if(c.title === 'Nouvelle conversation' && txt) c.title = txt.slice(0,32);
+  i.value = ''; i.style.height = 'auto'; pending = []; renderChips();
+  save(); renderAll(); busy = true;
+  const l = $('#list'), w = document.createElement('div');
+  w.className = 'm b';
+  w.innerHTML = '<div class="av">N</div><div class="bub"><div class="txt"><div class="dots"><span></span><span></span><span></span></div></div></div>';
+  l.appendChild(w); scrollD();
+  const speedMap = { rapide:400, normal:1200, lent:2400 };
+  const baseDelay = speedMap[SETTINGS.speed] || 1200;
+  setTimeout(() => {
+    const full = reply(txt, files), tx = w.querySelector('.txt');
+    tx.textContent = ''; let k = 0;
+    const step = SETTINGS.stream ? 4 : 2;
+    const iv = setInterval(() => {
+      k += step; tx.textContent = full.slice(0,k); scrollD();
+      if(k >= full.length){
+        clearInterval(iv);
+        c.msgs.push({ id:Date.now()+'b', role:'bot', text:full });
+        save(); busy = false; renderAll();
+        if(SETTINGS.logs) console.log('[NOVA] réponse', { model:SETTINGS.model, temp:SETTINGS.temp, tokens:SETTINGS.tokens });
+      }
+    }, SETTINGS.stream ? 8 : 18);
+  }, baseDelay + Math.random()*400);
+}
+$('#send').onclick = send;
+$('#inp').addEventListener('keydown', e => {
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+});
+$('#inp').addEventListener('input', e => {
+  e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight+'px';
+});
+
+// ===== FILES =====
+$('#bImg').onclick = () => $('#fImg').click();
+$('#bFile').onclick = () => $('#fAny').click();
+function addF(fl){
+  [...fl].forEach(f => {
+    if(f.size > 8e6) return toast('Fichier trop volumineux (8 Mo max)');
+    if(f.type.startsWith('image/') && f.size < 1.5e6){
+      const r = new FileReader();
+      r.onload = () => { pending.push({ name:f.name, type:f.type, url:r.result }); renderChips(); };
+      r.readAsDataURL(f);
+    } else {
+      pending.push({ name:f.name, type:f.type||'file', url:null });
+      renderChips();
+    }
+  });
+}
+$('#fImg').onchange = e => { addF(e.target.files); e.target.value = ''; };
+$('#fAny').onchange = e => { addF(e.target.files); e.target.value = ''; };
+function renderChips(){
+  const c = $('#chips'); c.innerHTML = '';
+  pending.forEach((f,i) => {
+    const d = document.createElement('div'); d.className = 'chip';
+    if(f.url && f.type.startsWith('image/')){ const im=document.createElement('img'); im.src=f.url; d.appendChild(im); }
+    const s = document.createElement('span'); s.textContent = f.name;
+    const b = document.createElement('button'); b.textContent = '×';
+    b.onclick = () => { pending.splice(i,1); renderChips(); };
+    d.append(s,b); c.appendChild(d);
+  });
+}
+
+// ===== MIC =====
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+$('#mic').onclick = () => {
+  if(!SR) return toast('La dictée vocale n’est pas disponible sur ce navigateur');
+  if(rec){ rec.stop(); return; }
+  rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = true;
+  const base = $('#inp').value;
+  rec.onresult = e => {
+    let s = '';
+    for(const r of e.results) s += r[0].transcript;
+    $('#inp').value = (base ? base+' ' : '') + s;
+  };
+  rec.onend = () => { rec = null; $('#mic').classList.remove('rec'); };
+  rec.onerror = () => toast('Micro indisponible ou refusé');
+  try { rec.start(); $('#mic').classList.add('rec'); } catch(e){ rec = null; }
+};
+
+// ===== SETTINGS UI =====
+$('#btnSettings').onclick = (e) => {
+  e.stopPropagation();
+  updateSettingsInfo();
+  applySettings();
+  $('#settings').classList.remove('hide');
+  closeSide();
+};
+$('#setClose').onclick = () => $('#settings').classList.add('hide');
+
+function updateSettingsInfo(){
+  if(!me) return;
+  const users = st.get('nova_users') || {};
+  const nameEl = $('#setName'), emailEl = $('#setEmail');
+  if(nameEl) nameEl.textContent = (users[me] && users[me].name) || '—';
+  if(emailEl) emailEl.textContent = me;
+  try {
+    let size = 0;
+    for(const k in localStorage) if(k.startsWith('d_')) size += (localStorage[k]||'').length;
+    const s = $('#setStorage');
+    if(s) s.textContent = (size/1024).toFixed(1) + ' Ko';
+  } catch(e){}
+}
+
+// ===== TOGGLES (fix mapping) =====
+document.querySelectorAll('#settings .toggle').forEach(t => {
+  t.onclick = () => {
+    const map = {
+      setAnim: 'anim',
+      setAutoClose: 'autoClose',
+      setTyping: 'typing',
+      setBtAuto: 'btAuto',
+      setCompact: 'compact',
+      setDev: 'dev',
+      setLogs: 'logs',
+      setStream: 'stream'
+    };
+    const key = map[t.id];
+    if(!key) return;
+    SETTINGS[key] = !SETTINGS[key];
+    t.classList.toggle('on', !!SETTINGS[key]);
+    saveSettings();
+    if(key === 'btAuto' && SETTINGS.btAuto) startScan(true);
+    toast('Paramètre mis à jour');
+  };
+});
+
+// ===== SELECTS =====
+$('#setTheme').onchange = e => { SETTINGS.theme = e.target.value; saveSettings(); applySettings(); };
+$('#setView').onchange = e => { SETTINGS.view = e.target.value; saveSettings(); toast('Vue par défaut : ' + e.target.value.toUpperCase()); };
+$('#setSpeed').onchange = e => { SETTINGS.speed = e.target.value; saveSettings(); };
+$('#setModel').onchange = e => { SETTINGS.model = e.target.value; saveSettings(); };
+$('#setTemp').oninput = e => { SETTINGS.temp = parseFloat(e.target.value) || 0; saveSettings(); };
+$('#setTokens').oninput = e => { SETTINGS.tokens = parseInt(e.target.value) || 2048; saveSettings(); };
+
+// ===== CHANGE PASSWORD =====
+$('#btnChangePw').onclick = () => {
+  $('#pwModal').classList.remove('hide');
+  $('#oldPw').value = ''; $('#newPw').value = ''; $('#newPw2').value = '';
+  $('#pwErr').classList.remove('on');
+};
+$('#pwCancel').onclick = () => $('#pwModal').classList.add('hide');
+$('#pwSave').onclick = async () => {
+  const oldPw = $('#oldPw').value, np = $('#newPw').value, np2 = $('#newPw2').value;
+  const e = $('#pwErr');
+  const showErr = m => { e.textContent = m; e.classList.add('on'); };
+  if(np.length < 6) return showErr('Le nouveau mot de passe doit contenir au moins 6 caractères.');
+  if(np !== np2) return showErr('Les mots de passe ne correspondent pas.');
+  const users = st.get('nova_users') || {};
+  const hOld = await hash(oldPw);
+  if(!users[me] || users[me].h !== hOld) return showErr('Mot de passe actuel incorrect.');
+  users[me].h = await hash(np);
+  st.set('nova_users', users);
+  $('#pwModal').classList.add('hide');
+  toast('Mot de passe modifié avec succès');
+};
+
+// ===== EXPORT =====
+$('#btnExport').onclick = () => {
+  const data = {
+    user: me,
+    exported: new Date().toISOString(),
+    settings: SETTINGS,
+    chats: D.chats.map(c => ({
+      title: c.title,
+      msgs: c.msgs.map(m => ({
+        role: m.role,
+        text: m.text,
+        files: (m.files||[]).map(f => ({ name:f.name, type:f.type }))
+      }))
+    }))
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nova-export-' + Date.now() + '.json';
+  a.click();
+  toast('Export téléchargé');
+};
+
+// ===== RESET =====
+$('#btnReset').onclick = () => {
+  if(!confirm('Effacer toutes les conversations ? Cette action est irréversible.')) return;
+  D.chats = []; newChat(); save(); renderAll(); toast('Historique effacé');
+};
+
+// ===== BLUETOOTH =====
+let btDevices = [], btScanning = false, btConnected = [];
+function startScan(silent){
+  $('#btPanel').classList.remove('hide');
+  const list = $('#btList');
+  btScanning = true;
+  list.innerHTML = '<div class="scanning"><div class="pulse"></div><p>Recherche d’appareils à proximité…</p></div>';
+  btDevices = [];
+  setTimeout(() => {
+    if(!btScanning) return;
+    btScanning = false;
+    const found = [
+      { name:'NOVA Speaker', type:'audio', rssi:-42 },
+      { name:'AirPods Pro', type:'audio', rssi:-58 },
+      { name:'Montre Connectée', type:'wearable', rssi:-65 },
+      { name:'Clavier BT', type:'input', rssi:-71 },
+      { name:'Souris Sans Fil', type:'input', rssi:-78 }
+    ];
+    btDevices = found.map((d,i) => ({
+      ...d, id:'bt_'+i+'_'+Date.now(), connected: btConnected.includes(d.name)
+    }));
+    renderBT();
+    if(silent) toast('Recherche Bluetooth terminée');
+  }, 2000 + Math.random()*1000);
+}
+function renderBT(){
+  const list = $('#btList');
+  if(!btDevices.length){
+    list.innerHTML = '<div class="scanning"><p>Aucun appareil trouvé. Relancez la recherche.</p></div>';
+    return;
+  }
+  list.innerHTML = '';
+  btDevices.forEach((d,i) => {
+    const el = document.createElement('div');
+    el.className = 'dev'; el.style.animationDelay = (i*.05)+'s';
+    const ic = d.type==='audio' ? '🔊' : d.type==='wearable' ? '⌚' : d.type==='input' ? '⌨️' : '📶';
+    const isConn = btConnected.includes(d.name);
+    el.innerHTML = `
+      <div class="ic">${ic}</div>
+      <div class="info"><b>${d.name}</b><small>${d.rssi} dBm · ${d.type}</small></div>
+      <span class="st ${isConn?'on':''}">${isConn?'Lié':'Disponible'}</span>
+      <button>${isConn?'Dissocier':'Lier'}</button>
+    `;
+    el.querySelector('button').onclick = () => {
+      if(btConnected.includes(d.name)){
+        btConnected = btConnected.filter(n => n !== d.name);
+        toast('Appareil dissocié : ' + d.name);
+      } else {
+        btConnected.push(d.name);
+        toast('Appareil lié : ' + d.name);
+      }
+      renderBT();
+    };
+    list.appendChild(el);
+  });
+}
+$('#btBtn').onclick = (e) => {
+  e.stopPropagation();
+  $('#btPanel').classList.remove('hide');
+  if(!btDevices.length) startScan(); else renderBT();
+  closeSide();
+};
+$('#btClose').onclick = () => { $('#btPanel').classList.add('hide'); btScanning = false; };
+$('#btScan').onclick = () => startScan();
+$('#btRefresh').onclick = () => startScan();
+$('#btnBTManage').onclick = () => {
+  $('#btPanel').classList.remove('hide');
+  if(!btDevices.length) startScan(); else renderBT();
+};
+
+// ===== INIT =====
+applySettings();
+const sess = st.get('nova_session'), us = st.get('nova_users');
+if(sess && us && us[sess]){
+  setTimeout(() => enter(sess, us[sess].name), 50);
+}
+</script>
+</body>
+</html>

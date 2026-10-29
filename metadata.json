@@ -1,0 +1,8 @@
+{
+  "name": "NOVA",
+  "description": "Assistant IA nouvelle génération avec interface ultra-moderne, modèles Claude 3.7 & 3.5 professionnels, vue A4, scanner Bluetooth avancé et gestion documentaire.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

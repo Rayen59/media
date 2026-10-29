@@ -1,188 +1,1535 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>MediAssist</title>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NOVA — Assistant IA</title>
+<meta name="description" content="Assistant IA professionnel de nouvelle génération propulsé par Google Gemini avec vue A4, cinématique 3D et scanner Bluetooth.">
+<meta property="og:title" content="NOVA — Assistant IA">
+<meta property="og:description" content="Assistant IA professionnel de nouvelle génération propulsé par Google Gemini avec vue A4, cinématique 3D et scanner Bluetooth.">
 <style>
-:root{--bg:#fff;--fg:#000;--g1:#f3f3f3;--g2:#d9d9d9;--g3:#767676}
-@media(prefers-color-scheme:dark){:root{--bg:#000;--fg:#fff;--g1:#121212;--g2:#2b2b2b;--g3:#9a9a9a}}
-*{box-sizing:border-box;margin:0}html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font:12.5px/1.5 ui-monospace,"SF Mono",Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased}
-button,input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--fg);border-radius:0;padding:7px 9px}
-button{cursor:pointer}button:hover:not(:disabled){background:var(--fg);color:var(--bg)}button:disabled{opacity:.4}
-.solid{background:var(--fg);color:var(--bg)}.solid:hover:not(:disabled){opacity:.8;background:var(--fg);color:var(--bg)}
+:root{
+  --bg:#fff;--fg:#0a0a0a;--mut:#6b6b6b;--line:#e4e4e4;--card:#f5f5f5;--inv:#0a0a0a;--invfg:#fff;
+  --a4w:794px;--a4h:1123px;--green:#10b981;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
+  --ease:cubic-bezier(0.16,1,0.3,1);--spring:cubic-bezier(0.34,1.56,0.64,1);
+  color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#000;--fg:#f5f5f5;--mut:#8a8a8a;--line:#222;--card:#0f0f0f;--inv:#fff;--invfg:#000;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#000;--fg:#f5f5f5;--mut:#8a8a8a;--line:#222;--card:#0f0f0f;--inv:#fff;--invfg:#000;color-scheme:dark}
+:root[data-theme="light"]{--bg:#fff;--fg:#0a0a0a;--mut:#6b6b6b;--line:#e4e4e4;--card:#f5f5f5;--inv:#0a0a0a;--invfg:#fff;color-scheme:light}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;transition:transform .18s var(--ease),opacity .18s,background-color .2s}
+button:active{transform:scale(.97)}
 .hide{display:none!important}
-#auth{height:100%;display:flex;align-items:center;justify-content:center;padding:16px;padding-top:max(16px,env(safe-area-inset-top))}
-.box{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
-.box h1{font-size:20px;letter-spacing:.2em;font-weight:700}.box p,.mut{color:var(--g3);font-size:11px}
-.tabs{display:flex}.tabs button{flex:1;border-bottom:0}.tabs .on{background:var(--fg);color:var(--bg)}
-#err{color:var(--fg);border-left:3px solid var(--fg);padding-left:8px;min-height:0}
-#app{height:100%;display:flex;flex-direction:column;max-width:900px;margin:0 auto;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
-header{display:flex;gap:6px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--fg)}
-header b{flex:1;letter-spacing:.2em}header button,header select{padding:4px 7px}
-.on2{background:var(--fg)!important;color:var(--bg)!important}
-#chips{display:flex;gap:6px;padding:7px 10px;overflow-x:auto;border-bottom:1px solid var(--g2)}
-#chips button{flex:none;padding:4px 9px;border-color:var(--g3)}
-#msgs{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
-.m{max-width:92%;border:1px solid var(--g2);padding:8px 10px}.m.user{align-self:flex-end;background:var(--fg);color:var(--bg);border-color:var(--fg)}
-.m p{margin-bottom:5px}.m ul{padding-left:16px;margin-bottom:5px}.m a{color:inherit}
-.act{display:flex;gap:10px;margin-top:6px;font-size:10.5px;opacity:.65}.act span{cursor:pointer;text-decoration:underline}
-.pl{border-top:1px solid var(--g2);margin-top:6px;padding-top:6px}.pl div{padding:2px 0}
-#thumbs{display:flex;gap:6px;padding:0 10px;flex-wrap:wrap}#thumbs span{border:1px solid var(--g3);padding:2px 6px;font-size:11px;cursor:pointer}
-#bar{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--fg);align-items:flex-end}
-#in{flex:1;resize:none;max-height:110px}
-.rec{animation:p 1s infinite}@keyframes p{50%{background:var(--g3)}}
-dialog{margin:auto;border:1px solid var(--fg);background:var(--bg);color:var(--fg);padding:14px;width:min(380px,94%)}
-dialog::backdrop{background:#0008}dialog label{display:block;margin-top:8px;color:var(--g3);font-size:11px}dialog input,dialog textarea{width:100%}
-.row{display:flex;gap:6px;margin-top:12px;justify-content:flex-end}
-</style></head><body>
 
-<div id="auth"><div class="box">
- <h1>MEDIASSIST</h1><p>Assistant médical IA · vocal · multilingue</p>
- <div class="tabs"><button id="tL" class="on">Connexion</button><button id="tR">Créer un compte</button></div>
- <div id="f1" style="display:contents">
-  <input id="em" type="email" placeholder="email" autocomplete="email">
-  <input id="pw" type="password" placeholder="mot de passe (8+ caractères)" autocomplete="current-password">
-  <button id="go" class="solid">Continuer</button>
- </div>
- <div id="f2" class="hide" style="flex-direction:column;gap:10px">
-  <p>Un code à 6 chiffres a été envoyé à votre email.</p>
-  <input id="cd" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.4em;text-align:center;font-size:18px">
-  <button id="vf" class="solid">Vérifier</button><button id="rs">Renvoyer le code</button>
- </div>
- <div id="err"></div>
+/* ===== INTRO CINÉMATIQUE ===== */
+#intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;background:var(--bg);z-index:100}
+#cv{position:absolute;inset:0;width:100%;height:100%;pointer-events:all}
+#intro::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 25%,var(--bg) 88%);pointer-events:none}
+.wrap{position:relative;z-index:2;width:100%;max-width:410px;text-align:center;pointer-events:auto}
+.logo{font-size:clamp(46px,12vw,74px);font-weight:800;letter-spacing:.35em;padding-left:.35em;display:flex;justify-content:center}
+.logo span{opacity:0;transform:translateY(36px) scale(.75);filter:blur(12px);animation:riseIn 1s var(--ease) forwards}
+@keyframes riseIn{to{opacity:1;transform:none;filter:none}}
+.tag{color:var(--mut);letter-spacing:.28em;font-size:11px;text-transform:uppercase;margin:10px 0 28px;opacity:0;animation:riseIn 1.1s 1.1s var(--ease) forwards}
+.card{background:color-mix(in srgb,var(--card) 85%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:22px;padding:24px;text-align:left;opacity:0;transform:translateY(28px) scale(.98);animation:riseIn 1.1s 1.4s var(--ease) forwards;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:18px}
+.tabs button{padding:10px;border-radius:10px;font-size:14px;color:var(--mut);transition:.25s var(--ease)}
+.tabs button.on{background:var(--inv);color:var(--invfg);font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.f{display:block;margin-bottom:13px}
+.f small{display:block;color:var(--mut);font-size:12px;margin-bottom:5px;font-weight:500}
+.f input,.f select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;outline:0;transition:.2s var(--ease)}
+.f input:focus,.f select:focus{border-color:var(--fg);box-shadow:0 0 0 3px color-mix(in srgb,var(--fg) 14%,transparent);transform:translateY(-1px)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--mut);margin:16px 0;line-height:1.45}
+.chk input{margin-top:3px;accent-color:var(--inv);width:16px;height:16px;flex:none}
+.chk a{color:var(--fg);text-decoration:underline;cursor:pointer}
+.btn{width:100%;background:var(--inv);color:var(--invfg);border-radius:14px;padding:14px;font-weight:700;font-size:15px;transition:.2s var(--ease)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.err{color:var(--red);font-size:13px;margin-top:12px;min-height:18px;text-align:left;border-left:3px solid var(--red);padding:8px 12px;background:color-mix(in srgb,var(--red) 10%,transparent);border-radius:0 10px 10px 0;display:none;line-height:1.4;animation:shake .4s var(--ease)}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.err.on{display:block}
+
+/* ===== MODALS ===== */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(6px);animation:fadeIn .25s var(--ease)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.mbox{background:var(--bg);border:1px solid var(--line);border-radius:20px;max-width:520px;width:100%;max-height:85%;display:flex;flex-direction:column;animation:popIn .35s var(--spring) forwards;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:none}}
+.mbox h3{padding:22px 24px 8px;font-size:18px;font-weight:700;letter-spacing:.05em}
+.mbody{padding:0 24px;overflow:auto;font-size:14px;line-height:1.65;color:var(--mut)}
+.mbody b{color:var(--fg);display:block;margin-top:12px}
+.mbox .btn{margin:20px 24px 24px;width:auto}
+
+/* ===== APP LAYOUT & CINÉMATIQUE ===== */
+#app{position:fixed;inset:0;display:flex;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#side{width:290px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--card);transition:transform .35s var(--ease);z-index:30;position:relative}
+.sh{padding:16px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;letter-spacing:.3em;font-size:16px;display:flex;align-items:center;gap:6px}
+.brand-gemini{font-size:10px;letter-spacing:.1em;padding:2px 7px;border-radius:6px;background:color-mix(in srgb,var(--blue) 18%,transparent);color:var(--blue);font-weight:600}
+.ib{width:36px;height:36px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);transition:.2s var(--ease);flex:none}
+.ib:hover{background:var(--inv);color:var(--invfg);transform:translateY(-1px)}
+.ib svg,.send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.newc{margin:0 16px 12px;padding:12px;border-radius:13px;background:var(--inv);color:var(--invfg);font-weight:700;font-size:14px;transition:.2s var(--ease);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.newc:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+#hist{flex:1;overflow:auto;padding:0 10px}
+.hi{display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:11px;font-size:14px;cursor:pointer;color:var(--mut);transition:.2s var(--ease);animation:itemSlide .35s var(--ease) forwards}
+@keyframes itemSlide{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.hi span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hi:hover,.hi.on{background:var(--bg);color:var(--fg);font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.hi button{opacity:.35;font-size:16px;width:24px;border-radius:6px;transition:.15s}
+.hi button:hover{opacity:1;color:var(--red)}
+.su{padding:14px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;font-size:14px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--inv);color:var(--invfg);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.su div{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--bg)}
+.top h2{font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#burger{display:none}
+#msgs{flex:1;overflow:auto;padding:24px 18px;scroll-behavior:smooth}
+.in{max-width:760px;margin:0 auto}
+.empty{text-align:center;margin-top:10vh}
+.empty .logo{font-size:40px;margin-bottom:12px}
+.empty p{color:var(--mut);font-size:15px;max-width:440px;margin:0 auto}
+.sug{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px}
+.sug button{border:1px solid var(--line);border-radius:22px;padding:9px 16px;font-size:13px;color:var(--mut);transition:.2s var(--ease)}
+.sug button:hover{background:var(--inv);color:var(--invfg);transform:translateY(-1px);border-color:var(--inv)}
+.m{display:flex;gap:12px;margin-bottom:22px;animation:msgEntrance .45s var(--ease) forwards;opacity:0}
+@keyframes msgEntrance{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.m.u{flex-direction:row-reverse}
+.m .av{width:32px;height:32px;font-size:12px;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.m.b .av{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:0}
+.bub{max-width:85%;position:relative}
+.txt{padding:13px 17px;border-radius:18px;font-size:14.5px;line-height:1.62;white-space:pre-wrap;word-wrap:break-word}
+.txt b{font-weight:700}
+.txt code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:rgba(128,128,128,.15);padding:2px 5px;border-radius:5px}
+.txt pre{background:rgba(0,0,0,.45);padding:12px 14px;border-radius:10px;overflow-x:auto;margin:8px 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.txt ul,.txt ol{padding-left:22px;margin:6px 0}
+.txt li{margin-bottom:5px}
+.u .txt{background:var(--inv);color:var(--invfg);border-bottom-right-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.b .txt{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.att{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.att img{max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--line);object-fit:cover;transition:transform .2s}
+.att img:hover{transform:scale(1.02)}
+.att .fl{border:1px solid var(--line);border-radius:11px;padding:8px 12px;font-size:12px;background:var(--card);color:var(--fg);display:inline-flex;align-items:center;gap:6px}
+.del{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:1px solid var(--line);font-size:12px;opacity:0;transition:.2s;display:flex;align-items:center;justify-content:center}
+.u .del{right:auto;left:-8px}
+.m:hover .del{opacity:1}
+@media (hover:none){.del{opacity:.8}}
+
+.dots span{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:var(--fg);animation:bounceDots 1s infinite var(--ease)}
+.dots span:nth-child(2){animation-delay:.16s}.dots span:nth-child(3){animation-delay:.32s}
+@keyframes bounceDots{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-8px);opacity:1}}
+
+.comp{padding:10px 18px 18px}
+.cbox{max-width:760px;margin:0 auto;border:1px solid var(--line);background:var(--card);border-radius:22px;padding:10px 12px;transition:.25s var(--ease);box-shadow:0 4px 16px rgba(0,0,0,.04)}
+.cbox:focus-within{border-color:var(--fg);box-shadow:0 6px 24px rgba(0,0,0,.09);transform:translateY(-1px)}
+#chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 4px}
+#chips:not(:empty){margin-bottom:8px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:11px;padding:4px 9px;font-size:12px;max-width:220px;animation:popIn .25s var(--spring)}
+.chip img{width:26px;height:26px;border-radius:6px;object-fit:cover}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{font-size:14px;color:var(--mut)}
+.row{display:flex;align-items:flex-end;gap:6px}
+#inp{flex:1;background:none;border:0;outline:0;resize:none;max-height:140px;padding:9px 6px;font-size:15px;line-height:1.45}
+.ib{border:0}
+.send{width:38px;height:38px;border-radius:12px;background:var(--inv);color:var(--invfg);display:flex;align-items:center;justify-content:center;flex:none;transition:.2s var(--ease)}
+.send:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.rec{background:var(--red)!important;color:#fff!important;animation:pulseRec 1.1s infinite}
+@keyframes pulseRec{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}100%{box-shadow:0 0 0 16px transparent}}
+.note{text-align:center;font-size:11px;color:var(--mut);margin-top:8px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--inv);color:var(--invfg);padding:10px 18px;border-radius:13px;font-size:13px;z-index:999;opacity:0;pointer-events:none;transition:.3s var(--ease);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(-4px)}
+
+/* ===== VUE A4 ===== */
+#a4{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);animation:fadeIn .3s var(--ease)}
+.a4-wrap{position:relative;background:var(--bg);border-radius:14px;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.6);max-width:95vw;max-height:95vh;width:var(--a4w);height:var(--a4h);min-width:320px;border:1px solid var(--line);animation:popIn .35s var(--spring)}
+.a4-header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg);border-bottom:1px solid var(--line);z-index:2}
+.a4-header h3{font-size:16px;letter-spacing:.2em;font-weight:800}
+.a4-body{padding:26px;font-size:14px;line-height:1.7;color:var(--fg)}
+.a4-page{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;margin-bottom:18px;min-height:160px;box-shadow:0 2px 6px rgba(0,0,0,.03)}
+.a4-close{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;transition:.2s}
+.a4-close:hover{background:var(--inv);color:var(--invfg)}
+
+/* ===== BLUETOOTH ===== */
+.dev{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;margin-bottom:9px;background:var(--bg);transition:.22s var(--ease);animation:itemSlide .3s var(--ease) forwards}
+.dev:hover{border-color:var(--fg);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.04)}
+.dev .ic{width:42px;height:42px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:19px;border:1px solid var(--line);flex:none}
+.dev .info{flex:1;min-width:0}
+.dev .info b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dev .info small{color:var(--mut);font-size:12px;display:flex;align-items:center;gap:6px;margin-top:2px}
+.sig-bars{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+.sig-bar{width:3px;background:var(--mut);border-radius:1px}
+.sig-bar.on{background:var(--green)}
+.dev .st{font-size:11px;padding:3px 9px;border-radius:8px;background:var(--card);color:var(--mut);border:1px solid var(--line);flex:none}
+.dev .st.on{background:var(--green);color:#fff;border-color:var(--green);font-weight:600}
+.dev-acts{display:flex;gap:6px;flex:none}
+.dev button{font-size:12px;padding:7px 12px;border-radius:9px;border:1px solid var(--line);transition:.2s}
+.dev button:hover{background:var(--inv);color:var(--invfg)}
+.dev button.ping{border-color:var(--blue);color:var(--blue)}
+.dev button.ping:hover{background:var(--blue);color:#fff}
+
+/* ===== PARAMÈTRES ===== */
+.settings{position:fixed;inset:0;z-index:150;background:var(--bg);overflow:auto;padding:24px 20px;animation:fadeIn .3s var(--ease)}
+.settings-inner{max-width:640px;margin:0 auto;padding-bottom:50px}
+.settings h2{font-size:22px;font-weight:800;letter-spacing:.15em;margin-bottom:20px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 3px 12px rgba(0,0,0,.03)}
+.sec h3{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:14px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;gap:12px}
+.set-row:last-child{border-bottom:0}
+.set-row small{display:block;color:var(--mut);font-size:12px;margin-top:3px}
+.set-row .val{color:var(--mut);font-size:13px}
+.toggle{width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:.25s var(--ease);flex:none;cursor:pointer}
+.toggle.on{background:var(--inv)}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--bg);transition:.25s var(--spring);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(20px)}
+.sel{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;max-width:270px;outline:0;transition:.2s}
+.sel:focus{border-color:var(--fg)}
+.btn-s{background:var(--inv);color:var(--invfg);border-radius:11px;padding:9px 16px;font-size:13px;font-weight:600}
+.btn-o{background:none;border:1px solid var(--line);border-radius:11px;padding:9px 16px;font-size:13px;transition:.2s}
+.btn-o:hover{background:var(--inv);color:var(--invfg)}
+.badge-ok{color:var(--green);font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:4px}
+
+/* ===== BLUETOOTH PANEL ===== */
+#btPanel{position:fixed;inset:0;z-index:180;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .3s var(--ease)}
+.bt-box{background:var(--bg);border:1px solid var(--line);border-radius:22px;max-width:520px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:popIn .35s var(--spring)}
+.bt-h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.bt-h h3{flex:1;font-size:16px;font-weight:700}
+.bt-tabs{display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--card)}
+.bt-tabs button{padding:6px 11px;font-size:12px;border-radius:9px;border:1px solid var(--line);color:var(--mut);white-space:nowrap;transition:.2s var(--ease)}
+.bt-tabs button.on{background:var(--inv);color:var(--invfg);border-color:var(--inv);font-weight:600}
+.bt-scan{width:100%;padding:14px;background:var(--inv);color:var(--invfg);font-weight:700;font-size:14px;letter-spacing:.05em;transition:.2s var(--ease)}
+.bt-scan:hover{opacity:.9}
+.bt-list{padding:14px;overflow:auto;flex:1}
+.scanning{text-align:center;padding:30px 16px;color:var(--mut)}
+.pulse-container{position:relative;width:70px;height:70px;margin:0 auto 16px}
+.pulse-wave{position:absolute;inset:0;border-radius:50%;border:2px solid var(--fg);animation:wavePulse 1.8s infinite var(--ease)}
+.pulse-wave:nth-child(2){animation-delay:.6s}
+.pulse-wave:nth-child(3){animation-delay:1.2s}
+@keyframes wavePulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(2.2);opacity:0}}
+
+@media(max-width:760px){
+  #side{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);width:82%;max-width:320px;padding-top:env(safe-area-inset-top,0px)}
+  #side.open{transform:none}
+  #burger{display:inline-flex}
+  .bub{max-width:88%}
+  .a4-wrap{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0}
+  .sel{max-width:180px}
+}
+</style>
+</head>
+<body>
+
+<!-- ÉCRAN D'ACCUEIL / AUTHENTIFICATION -->
+<section id="intro">
+<canvas id="cv"></canvas>
+<div class="wrap">
+  <div class="logo" id="logo"></div>
+  <div class="tag">Moteur Google Gemini · Cinématique & Précision</div>
+  <div class="card">
+    <div class="tabs"><button id="tL" class="on">Connexion</button><button id="tS">Créer un compte</button></div>
+    <label class="f hide" id="fN"><small>Nom complet</small><input id="name" autocomplete="name" placeholder="Votre nom complet"></label>
+    <label class="f"><small>Adresse e-mail</small><input id="email" type="email" autocomplete="email" placeholder="vous@exemple.com"></label>
+    <label class="f"><small>Mot de passe</small><input id="pass" type="password" autocomplete="current-password" placeholder="•••••••• (6+ caractères)"></label>
+    <label class="chk"><input type="checkbox" id="ok"><span>J’ai lu et j’accepte les <a id="pv">règles de confidentialité</a> et conditions d'accès.</span></label>
+    <button class="btn" id="go" disabled>Se connecter</button>
+    <div class="err" id="err"></div>
+  </div>
+</div>
+</section>
+
+<!-- MODAL CONFIDENTIALITÉ -->
+<div class="modal hide" id="modal"><div class="mbox">
+<h3>Règles de confidentialité</h3>
+<div class="mbody">
+<b>1. Compte & Unicité</b>Chaque adresse e-mail ne peut être enregistrée qu'une seule fois. Vos accès sont protégés par hachage cryptographique bcrypt.
+<b>2. Moteur IA Google Gemini</b>L'intelligence artificielle est propulsée par les modèles Google Gemini directement sur le serveur sécurisé. Aucune clé API personnelle n'est demandée à l'utilisateur.
+<b>3. Stockage local & Sécurisé</b>Toutes vos conversations sont conservées dans votre base locale. Vous conservez le contrôle total et pouvez exporter ou supprimer vos données à tout moment.
+<b>4. Bluetooth & Télémétrie</b>L'accès Bluetooth est activé uniquement lors de vos scans pour connecter vos montres et capteurs.
+</div>
+<button class="btn" id="mc">J’ai compris</button>
 </div></div>
 
+<!-- INTERFACE PRINCIPALE -->
 <div id="app" class="hide">
- <header>
-  <b>MEDIASSIST</b>
-  <select id="vl" title="Langue du micro"><option value="">🎙 auto</option><option>fr-FR</option><option>en-US</option><option>ar-SA</option><option>es-ES</option><option>pt-BR</option><option>de-DE</option><option>it-IT</option><option>tr-TR</option><option>zh-CN</option><option>hi-IN</option><option>ru-RU</option><option>ja-JP</option><option>sw-KE</option></select>
-  <button id="sp" title="Réponse vocale">🔊</button>
-  <button id="wt" title="Montre Bluetooth">⌚</button>
-  <button id="st" title="Réglages">⚙</button>
- </header>
- <div id="chips"><button data-n="pharmacy">💊 Pharmacies</button><button data-n="hospital">🏥 Hôpitaux</button><button data-t="J’ai de la fièvre depuis 2 jours, que faire ?">🤒 Symptômes</button><button id="cl">🗑 Vider l’historique</button></div>
- <div id="msgs"></div><div id="thumbs"></div>
- <div id="bar">
-  <button id="mic" title="Parler">🎙</button><button id="at" title="Photo / PDF">📎</button><button id="ps" title="Coller">⎘</button>
-  <input type="file" id="fl" accept="image/*,application/pdf" multiple class="hide">
-  <textarea id="in" rows="1" placeholder="Écrivez ou parlez…"></textarea>
-  <button id="sd" class="solid">➤</button>
- </div>
+<aside id="side">
+  <div class="sh">
+    <div class="brand">NOVA <span class="brand-gemini">GEMINI</span></div>
+    <div style="display:flex;gap:6px">
+      <button class="ib" id="theme" title="Changer de thème"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg></button>
+      <button class="ib" id="btnSettings" title="Paramètres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    </div>
+  </div>
+  <button class="newc" id="newc">+ Nouvelle conversation</button>
+  <div id="hist"></div>
+  <div class="su"><div class="av" id="uav">N</div><div id="uname">Chargement...</div>
+    <button class="ib" id="btBtn" title="Scanner Bluetooth"><svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/></svg></button>
+    <button class="ib" id="out" title="Déconnexion"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+  </div>
+</aside>
+<main id="main">
+  <div class="top">
+    <button class="ib" id="burger"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <h2 id="ttl">Nouvelle conversation</h2>
+    <button class="ib" id="a4Btn" title="Vue A4 Document"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h5"/></svg></button>
+    <button class="ib" id="clr" title="Supprimer cette conversation"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+  </div>
+  <div id="msgs"><div class="in" id="list"></div></div>
+  <div class="comp"><div class="cbox">
+    <div id="chips"></div>
+    <div class="row">
+      <button class="ib" id="bImg" title="Joindre une photo"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
+      <button class="ib" id="bFile" title="Joindre un document ou PDF"><svg viewBox="0 0 24 24"><path d="M21 12l-9 9a6 6 0 01-9-9l9-9a4 4 0 016 6l-9 9a2 2 0 01-3-3l8-8"/></svg></button>
+      <textarea id="inp" rows="1" placeholder="Posez une question ou donnez une instruction à NOVA…"></textarea>
+      <button class="ib" id="mic" title="Dictée vocale"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/></svg></button>
+      <button class="send" id="send" title="Envoyer"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+    </div>
+  </div><div class="note">NOVA propulsé par Google Gemini · Modèles multimodaux haute performance & raisonnement rapide.</div></div>
+</main>
 </div>
 
-<dialog id="dg">
- <b>RÉGLAGES</b><p class="mut" id="who"></p>
- <label>Clé API Claude <span id="kst"></span><input id="ak" type="password" placeholder="sk-ant-… (laisser vide = inchangée)" autocomplete="off"></label>
- <label>Âge / sexe<input id="pa"></label><label>Maladies<textarea id="pc" rows="2"></textarea></label>
- <label>Traitements<textarea id="pm" rows="2"></textarea></label><label>Allergies<input id="pl"></label>
- <div class="row"><button id="lo">Déconnexion</button><button id="x">Fermer</button><button id="sv" class="solid">Enregistrer</button></div>
-</dialog>
+<!-- VUE A4 -->
+<div id="a4" class="hide">
+  <div class="a4-wrap">
+    <div class="a4-header">
+      <h3>NOVA · VUE DOCUMENT A4</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn-o" id="a4Print" style="padding:6px 12px;font-size:12px">Imprimer / PDF</button>
+        <button class="a4-close" id="a4Close">✕</button>
+      </div>
+    </div>
+    <div class="a4-body" id="a4Body"></div>
+  </div>
+</div>
+
+<!-- PARAMÈTRES (SANS SAISIE DE CLÉ PAR L'UTILISATEUR) -->
+<div id="settings" class="hide settings">
+  <div class="settings-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2>PARAMÈTRES NOVA</h2>
+      <button class="btn-o" id="setClose">Fermer</button>
+    </div>
+
+    <!-- MOTEUR GEMINI INTEGRE -->
+    <div class="sec">
+      <h3>Moteur IA Google Gemini</h3>
+      <div class="set-row">
+        <div>
+          <b>État du Moteur IA</b>
+          <small>Clé Gemini intégrée automatiquement côté serveur (zéro configuration requise)</small>
+        </div>
+        <span class="badge-ok">✓ Prêt & Opérationnel</span>
+      </div>
+      <div class="set-row" style="margin-top:8px">
+        <div><b>Modèle Gemini</b><small>Moteur d'inférence et de raisonnement</small></div>
+        <select class="sel" id="setModel">
+          <option value="gemini-3-flash-preview">Google Gemini 3 Flash (Recommandé · Vitesse & Esprit)</option>
+          <option value="gemini-3.5-flash">Google Gemini 3.5 Flash (Expert Multimodal)</option>
+          <option value="gemini-3.8-flash">Google Gemini 3.8 Flash (Raisonnement Avancé)</option>
+        </select>
+      </div>
+      <div class="set-row">
+        <div><b>Température de réponse</b><small>Créativité (0.0 = Rigoureux, 1.0 = Équilibré)</small></div>
+        <input class="sel" type="number" id="setTemp" min="0" max="2" step="0.1" value="0.7" style="width:80px">
+      </div>
+      <div class="set-row">
+        <div><b>Longueur max (Tokens)</b><small>Plafond de tokens par réponse</small></div>
+        <input class="sel" type="number" id="setTokens" min="256" max="8192" step="128" value="2048" style="width:100px">
+      </div>
+    </div>
+
+    <!-- COMPTE -->
+    <div class="sec">
+      <h3>Compte Utilisateur</h3>
+      <div class="set-row"><div><b>Nom complet</b><small>Nom affiché dans l’application</small></div><span class="val" id="setName">—</span></div>
+      <div class="set-row"><div><b>Adresse e-mail unique</b><small>Identifiant de connexion garanti unique</small></div><span class="val" id="setEmail">—</span></div>
+      <div class="set-row"><div><b>Mot de passe</b><small>Modifier votre mot de passe d'accès</small></div><button class="btn-o" id="btnChangePw">Modifier</button></div>
+    </div>
+
+    <!-- BLUETOOTH -->
+    <div class="sec">
+      <h3>Bluetooth & Objets Connectés</h3>
+      <div class="set-row"><div><b>Recherche automatique</b><small>Scanner les appareils à l'ouverture de NOVA</small></div><div class="toggle" id="setBtAuto"></div></div>
+      <div class="set-row"><div><b>Gestionnaire d'appareils</b><small>Appairer montres Nordic UART, audio, capteurs</small></div><button class="btn-o" id="btnBTManage">Ouvrir le scanner</button></div>
+    </div>
+
+    <!-- APPARENCE ET CINÉMATIQUE -->
+    <div class="sec">
+      <h3>Apparence & Cinématique</h3>
+      <div class="set-row"><div><b>Thème visuel</b><small>Mode clair ou sombre</small></div>
+        <select class="sel" id="setTheme"><option value="dark">Sombre</option><option value="light">Clair</option></select></div>
+      <div class="set-row"><div><b>Cinématique & Effets 3D</b><small>Physique particulaire et ondulations gravitationnelles</small></div><div class="toggle on" id="setAnim"></div></div>
+      <div class="set-row"><div><b>Vue par défaut</b><small>Format d’affichage des échanges</small></div>
+        <select class="sel" id="setView"><option value="chat">Chat interactif</option><option value="a4">Vue Document A4</option></select></div>
+      <div class="set-row"><div><b>Vitesse de dactylographie</b><small>Fluidité du texte IA</small></div>
+        <select class="sel" id="setSpeed"><option value="rapide">Rapide</option><option value="normal" selected>Normal</option><option value="lent">Posé</option></select></div>
+      <div class="set-row"><div><b>Fermeture automatique du volet</b><small>Clic extérieur sur mobile</small></div><div class="toggle on" id="setAutoClose"></div></div>
+    </div>
+
+    <!-- GESTION DES DONNÉES -->
+    <div class="sec">
+      <h3>Données & Sauvegarde</h3>
+      <div class="set-row"><div><b>Export complet</b><small>Télécharger toutes les conversations en JSON</small></div><button class="btn-o" id="btnExport">Exporter en JSON</button></div>
+      <div class="set-row"><div><b>Réinitialiser l'historique</b><small>Effacer toutes les conversations du serveur</small></div><button class="btn-o" id="btnReset" style="color:var(--red);border-color:var(--red)">Effacer tout</button></div>
+      <div class="set-row"><div><b>Version</b><small>NOVA AI Gemini Edition</small></div><span class="val">v3.0 (Gemini Engine)</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- BLUETOOTH PANEL -->
+<div id="btPanel" class="hide">
+  <div class="bt-box">
+    <div class="bt-h">
+      <button class="ib" id="btClose" style="border:0">✕</button>
+      <h3>Périphériques Bluetooth</h3>
+      <button class="ib" id="btPairReal" title="Appairer un vrai périphérique Web Bluetooth (Montre BLE, Capteur...)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="ib" id="btRefresh" title="Actualiser le radar"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg></button>
+    </div>
+    <div class="bt-tabs">
+      <button class="on" data-cat="all">Tous</button>
+      <button data-cat="wearable">Montres & Wearables</button>
+      <button data-cat="audio">Audio & Casques</button>
+      <button data-cat="health">Santé & Biométrie</button>
+      <button data-cat="input">Périphériques</button>
+    </div>
+    <button class="bt-scan" id="btScan">Lancer la recherche radar</button>
+    <div class="bt-list" id="btList">
+      <div class="scanning" id="btIdle"><p style="margin-top:12px">Cliquez sur « Lancer la recherche » pour scanner les montres BLE (Nordic UART), capteurs et accessoires à portée.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGEMENT MOT DE PASSE -->
+<div class="modal hide" id="pwModal"><div class="mbox">
+  <h3>Changer de mot de passe</h3>
+  <div class="mbody" style="padding-bottom:8px">
+    <label class="f"><small>Mot de passe actuel</small><input type="password" id="oldPw" placeholder="••••••••"></label>
+    <label class="f"><small>Nouveau mot de passe</small><input type="password" id="newPw" placeholder="•••••••• (6+ caractères)"></label>
+    <label class="f"><small>Confirmer le nouveau mot de passe</small><input type="password" id="newPw2" placeholder="••••••••"></label>
+    <div class="err" id="pwErr"></div>
+  </div>
+  <div style="display:flex;gap:10px;padding:0 22px 22px">
+    <button class="btn" id="pwCancel" style="flex:1;background:var(--card);color:var(--fg);border:1px solid var(--line)">Annuler</button>
+    <button class="btn" id="pwSave" style="flex:1">Enregistrer</button>
+  </div>
+</div></div>
+
+<input type="file" id="fImg" accept="image/*" multiple class="hide">
+<input type="file" id="fAny" accept="image/*,application/pdf,text/*" multiple class="hide">
+<div id="toast"></div>
 
 <script>
-const $=s=>document.querySelector(s);let mode='login',loc=null,files=[],speak=true,me=null,watch=null,busy=false;
-const api=async(m,u,b)=>{const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(j.error||'Erreur'),{data:j,status:r.status});return j};
-const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const md=t=>{let o=[],l=0;for(let x of esc(t).split('\n')){x=x.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');const m=x.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)/);if(m){if(!l){o.push('<ul>');l=1}o.push('<li>'+m[1]+'</li>')}else{if(l){o.push('</ul>');l=0}if(x.trim())o.push('<p>'+x.replace(/^#+\s*/,'')+'</p>')}}return o.join('')+(l?'</ul>':'')};
-const err=t=>$('#err').textContent=t||'';
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
 
-/* AUTH */
-const setMode=m=>{mode=m;$('#tL').classList.toggle('on',m=='login');$('#tR').classList.toggle('on',m=='register');$('#pw').autocomplete=m=='login'?'current-password':'new-password';err()};
-$('#tL').onclick=()=>setMode('login');$('#tR').onclick=()=>setMode('register');
-const showVerify=()=>{$('#f1').classList.add('hide');$('#f2').classList.remove('hide');$('#f2').style.display='flex'};
-$('#go').onclick=async()=>{err();try{await api('POST','/api/'+mode,{email:$('#em').value,password:$('#pw').value});mode=='login'?boot():showVerify()}catch(e){e.data?.needVerify?(showVerify(),err(e.message)):err(e.message)}};
-$('#vf').onclick=async()=>{err();try{await api('POST','/api/verify',{email:$('#em').value,code:$('#cd').value});boot()}catch(e){err(e.message)}};
-$('#rs').onclick=async()=>{await api('POST','/api/resend',{email:$('#em').value});err('Code renvoyé.')};
-
-async function boot(){
-  try{me=await api('GET','/api/me')}catch{return}
-  $('#auth').classList.add('hide');$('#app').classList.remove('hide');
-  const h=await api('GET','/api/history');$('#msgs').innerHTML='';h.forEach(m=>addMsg(m.role,m.text,m.id));
-  if(!h.length)addMsg('assistant','Bonjour. Parlez ou écrivez dans votre langue. Je réponds à voix haute dans la même langue. Envoyez aussi photos et PDF.');
-  if(!me.hasKey)openSettings();
-}
-
-/* MESSAGES */
-function addMsg(role,text,id,places){
-  const d=document.createElement('div');d.className='m '+role;d.dataset.id=id||'';
-  d.innerHTML=md(text)+(places?.length?'<div class="pl">'+places.map(p=>`<div>• <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}">${esc(p.name)}</a> · ${p.dist<1000?p.dist+' m':(p.dist/1000).toFixed(1)+' km'}${p.phone?' · '+esc(p.phone):''}</div>`).join('')+'</div>':'');
-  const a=document.createElement('div');a.className='act';
-  const cp=document.createElement('span');cp.textContent='copier';cp.onclick=async()=>{try{await navigator.clipboard.writeText(text);cp.textContent='copié ✓'}catch{}};
-  const dl=document.createElement('span');dl.textContent='supprimer';dl.onclick=async()=>{if(d.dataset.id)await api('DELETE','/api/history/'+d.dataset.id).catch(()=>{});d.remove()};
-  a.append(cp,dl);d.appendChild(a);$('#msgs').appendChild(d);$('#msgs').scrollTop=1e9;return d;
-}
-$('#cl').onclick=async()=>{if(confirm('Supprimer tout l’historique ?')){await api('DELETE','/api/history');$('#msgs').innerHTML=''}};
-$('#ps').onclick=async()=>{try{$('#in').value+=await navigator.clipboard.readText()}catch{err('Collage refusé : utilisez Ctrl+V')}};
-
-/* ENVOI */
-async function send(text,fromWatch){
-  text=(text??$('#in').value).trim();if((!text&&!files.length)||busy)return;busy=true;$('#sd').disabled=true;
-  const f=files;files=[];thumbs();$('#in').value='';
-  addMsg('user',text||'(fichiers joints)');const w=addMsg('assistant','…');
-  try{const r=await api('POST','/api/chat',{text,files:f,loc});
-    w.remove();addMsg('assistant',r.text,r.ids[1],r.places);
-    if(speak)say(r.text,r.lang);if(watch)toWatch(r.text);
-  }catch(e){w.remove();addMsg('assistant','⚠ '+e.message)}
-  busy=false;$('#sd').disabled=false;
-}
-$('#sd').onclick=()=>send();
-$('#in').onkeydown=e=>{if(e.key=='Enter'&&!e.shiftKey&&innerWidth>700){e.preventDefault();send()}};
-document.querySelectorAll('#chips [data-t]').forEach(b=>b.onclick=()=>send(b.dataset.t));
-document.querySelectorAll('#chips [data-n]').forEach(b=>b.onclick=async()=>{
-  const p=await getLoc();if(!p)return addMsg('assistant','Activez la localisation.');
-  try{const r=await api('GET',`/api/nearby?lat=${p.lat}&lng=${p.lng}&type=${b.dataset.n}`);
-    addMsg('assistant',r.length?'Les plus proches :':'Rien trouvé à moins de 5 km.',null,r);
-  }catch(e){addMsg('assistant','⚠ '+e.message)}});
-const getLoc=()=>new Promise(r=>loc?r(loc):navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>r(loc={lat:+p.coords.latitude.toFixed(4),lng:+p.coords.longitude.toFixed(4)}),()=>r(null),{timeout:9000}):r(null));
-getLoc();
-
-/* FICHIERS */
-const b64=f=>new Promise(r=>{const x=new FileReader();x.onload=()=>r(x.result.split(',')[1]);x.readAsDataURL(f)});
-const shrink=f=>new Promise(r=>{const i=new Image;i.onload=()=>{const s=Math.min(1,1800/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.85).split(',')[1])};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)});
-$('#at').onclick=()=>$('#fl').click();
-$('#fl').onchange=async e=>{for(const f of e.target.files){if(f.size>20e6){err('Fichier trop gros');continue}
-  const pdf=f.type=='application/pdf',d=pdf?await b64(f):await shrink(f);if(d)files.push({name:f.name,type:pdf?f.type:'image/jpeg',data:d})}e.target.value='';thumbs()};
-const thumbs=()=>{$('#thumbs').innerHTML='';files.forEach((f,i)=>{const s=document.createElement('span');s.textContent='✕ '+f.name;s.onclick=()=>{files.splice(i,1);thumbs()};$('#thumbs').appendChild(s)})};
-document.addEventListener('paste',e=>{[...e.clipboardData.files].forEach(async f=>{if(f.type.startsWith('image/')){files.push({name:'image',type:'image/jpeg',data:await shrink(f)});thumbs()}})});
-
-/* VOIX */
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
-$('#mic').onclick=()=>{
-  if(!SR)return addMsg('assistant','Reconnaissance vocale non supportée par ce navigateur (utilisez Chrome ou Safari).');
-  if(rec){rec.stop();return}
-  rec=new SR();rec.lang=$('#vl').value||navigator.language||'fr-FR';rec.interimResults=true;
-  rec.onresult=e=>{const t=[...e.results].map(r=>r[0].transcript).join('');$('#in').value=t;if(e.results[e.results.length-1].isFinal)send()};
-  rec.onend=()=>{rec=null;$('#mic').classList.remove('rec')};rec.onerror=()=>{};rec.start();$('#mic').classList.add('rec');speechSynthesis.cancel();
+// Client-server API helper with JWT token
+const api = async (method, url, body) => {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = localStorage.getItem('nova_jwt');
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw Object.assign(new Error(data.error || 'Erreur réseau'), { data, status: res.status });
+  }
+  if (data.token) localStorage.setItem('nova_jwt', data.token);
+  return data;
 };
-function say(t,lang){
-  if(!window.speechSynthesis)return;speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(t.replace(/[*#_`•]/g,'').slice(0,3000));u.lang=lang;
-  const v=speechSynthesis.getVoices();u.voice=v.find(x=>x.lang==lang)||v.find(x=>x.lang.slice(0,2)==lang.slice(0,2))||null;speechSynthesis.speak(u);
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.remove('on'), 2600);
 }
-$('#sp').onclick=()=>{speak=!speak;$('#sp').classList.toggle('on2',speak);if(!speak)speechSynthesis.cancel()};$('#sp').classList.add('on2');
 
-/* MONTRE BLUETOOTH (Nordic UART : 6e400001…) */
-const NUS='6e400001-b5a3-f393-e0a9-f5e57e43dc3e',RX='6e400002-b5a3-f393-e0a9-f5e57e43dc3e',TX='6e400003-b5a3-f393-e0a9-f5e57e43dc3e';
-$('#wt').onclick=async()=>{
-  if(watch){watch.dev.gatt.disconnect();return}
-  if(!navigator.bluetooth)return addMsg('assistant','Web Bluetooth indisponible : utilisez Chrome sur Android ou ordinateur.');
-  try{
-    const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[NUS]});
-    const srv=await dev.gatt.connect(),s=await srv.getPrimaryService(NUS),rx=await s.getCharacteristic(RX),tx=await s.getCharacteristic(TX);
-    let buf='';const dd=new TextDecoder();
-    await tx.startNotifications();tx.addEventListener('characteristicvaluechanged',e=>{buf+=dd.decode(e.target.value);let i;while((i=buf.indexOf('\n'))>=0){const t=buf.slice(0,i).trim();buf=buf.slice(i+1);if(t)send(t,true)}});
-    watch={dev,rx};$('#wt').classList.add('on2');
-    dev.addEventListener('gattserverdisconnected',()=>{watch=null;$('#wt').classList.remove('on2')});
-    addMsg('assistant','⌚ Montre connectée : "'+esc(dev.name||'appareil')+'". Parlez dessus : les recherches se font ici, la réponse revient sur la montre.');
-  }catch(e){addMsg('assistant','⌚ Connexion annulée ou service non compatible (la montre doit exposer le service UART BLE).')}
+// ===== LOCAL STATE =====
+let currentUser = null;
+let currentChatId = null;
+let chatsList = [];
+let currentMessages = [];
+let pendingFiles = [];
+let isBusy = false;
+
+let SETTINGS = {
+  theme: 'dark',
+  view: 'chat',
+  anim: true,
+  autoClose: true,
+  typing: true,
+  btAuto: false,
+  speed: 'normal',
+  compact: false,
+  model: 'gemini-3-flash-preview',
+  temp: 0.7,
+  tokens: 2048,
+  stream: false
 };
-async function toWatch(t){const b=new TextEncoder().encode(t.replace(/[*#_`]/g,'').slice(0,600)+'\n');
-  try{for(let i=0;i<b.length;i+=20){await watch.rx.writeValueWithoutResponse(b.slice(i,i+20));await new Promise(r=>setTimeout(r,25))}}catch{}}
 
-/* RÉGLAGES */
-const dg=$('#dg');
-function openSettings(){const p=me.profile||{};$('#who').textContent=me.email;$('#kst').textContent=me.hasKey?'✓ enregistrée':'✗ manquante';$('#ak').value='';$('#pa').value=p.age||'';$('#pc').value=p.cond||'';$('#pm').value=p.meds||'';$('#pl').value=p.all||'';dg.showModal()}
-$('#st').onclick=openSettings;$('#x').onclick=()=>dg.close();
-$('#sv').onclick=async()=>{try{await api('PUT','/api/settings',{apikey:$('#ak').value,profile:{age:$('#pa').value,cond:$('#pc').value,meds:$('#pm').value,all:$('#pl').value}});me=await api('GET','/api/me');dg.close()}catch(e){alert(e.message)}};
-$('#lo').onclick=async()=>{await api('POST','/api/logout');location.reload()};
+try {
+  const saved = JSON.parse(localStorage.getItem('nova_client_settings'));
+  if (saved) Object.assign(SETTINGS, saved);
+} catch(e){}
+
+function saveSettingsLocally() {
+  localStorage.setItem('nova_client_settings', JSON.stringify(SETTINGS));
+}
+
+function applySettings() {
+  document.documentElement.dataset.theme = SETTINGS.theme;
+  const toggleMap = {
+    setAnim: SETTINGS.anim,
+    setAutoClose: SETTINGS.autoClose,
+    setBtAuto: SETTINGS.btAuto
+  };
+  Object.keys(toggleMap).forEach(id => {
+    const el = $('#' + id);
+    if (el) el.classList.toggle('on', !!toggleMap[id]);
+  });
+  const setV = (sel, val) => { const el = $(sel); if (el && val !== undefined) el.value = val; };
+  setV('#setTheme', SETTINGS.theme);
+  setV('#setView', SETTINGS.view);
+  setV('#setSpeed', SETTINGS.speed);
+  setV('#setModel', SETTINGS.model);
+  setV('#setTemp', SETTINGS.temp);
+  setV('#setTokens', SETTINGS.tokens);
+}
+
+// ===== THEME TOGGLE =====
+$('#theme').onclick = () => {
+  SETTINGS.theme = SETTINGS.theme === 'dark' ? 'light' : 'dark';
+  saveSettingsLocally();
+  applySettings();
+  toast('Thème ' + (SETTINGS.theme === 'dark' ? 'sombre' : 'clair'));
+  if (currentUser) {
+    api('PUT', '/api/settings', { settings: SETTINGS }).catch(() => {});
+  }
+};
+
+// ===== LOGO ANIMATION =====
+'NOVA'.split('').forEach((letter, i) => {
+  const span = document.createElement('span');
+  span.textContent = letter;
+  span.style.animationDelay = (0.2 + i * 0.18) + 's';
+  $('#logo').appendChild(span);
+});
+
+// ===== CINÉMATIQUE & PHYSIQUE PARTICULAIRE 3D =====
+const cv = $('#cv'), cx = cv.getContext('2d');
+let W, H, particles = [], targetMx = 0, targetMy = 0, currentMx = 0, currentMy = 0, runSphere = true;
+
+function resizeCanvas() {
+  const r = devicePixelRatio || 1;
+  W = cv.width = innerWidth * r;
+  H = cv.height = innerHeight * r;
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+}
+addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Initialisation des particules avec distribution sphérique et rotation angulaire (Fibonacci)
+const TOTAL_PARTICLES = 1300;
+for (let i = 0; i < TOTAL_PARTICLES; i++) {
+  const y = 1 - 2 * (i + 0.5) / TOTAL_PARTICLES;
+  const r = Math.sqrt(1 - y * y);
+  const a = i * 2.399963229728653; // Angle d'or
+  const speed = 0.8 + Math.random() * 0.4;
+  const size = 1.0 + Math.random() * 1.6;
+  const orbitOffset = (Math.random() - 0.5) * 0.15;
+  particles.push({
+    x: Math.cos(a) * r,
+    y: y,
+    z: Math.sin(a) * r,
+    baseR: 1 + orbitOffset,
+    speed: speed,
+    size: size,
+    pulseOffset: Math.random() * Math.PI * 2
+  });
+}
+
+addEventListener('pointermove', e => {
+  targetMx = (e.clientX / innerWidth - 0.5);
+  targetMy = (e.clientY / innerHeight - 0.5);
+});
+
+// Kinematic render loop with fluid inertial smoothing and dynamic constellation links
+let lastTime = 0;
+function drawKinematicUniverse(timestamp) {
+  if (!runSphere) return;
+  const t = timestamp * 0.001;
+
+  // Inertie cinématique (lissage fluide lerp)
+  currentMx += (targetMx - currentMx) * 0.055;
+  currentMy += (targetMy - currentMy) * 0.055;
+
+  cx.clearRect(0, 0, W, H);
+
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  const baseRadius = Math.min(W, H) * (0.22 + Math.min(t, 2.5) * 0.04);
+  
+  // Respiration cinématique harmonique
+  const breath = 1 + 0.06 * Math.sin(t * 1.8) * Math.cos(t * 0.9);
+  const R = baseRadius * breath;
+
+  // Angles de rotation avec impulsion de la souris
+  const ry = t * 0.28 + currentMx * 2.2;
+  const rx = currentMy * 1.4 + 0.25;
+
+  const cy1 = Math.cos(ry), sy1 = Math.sin(ry);
+  const cx1 = Math.cos(rx), sx1 = Math.sin(rx);
+
+  const projected = [];
+  const centerX = W / 2;
+  const centerY = H * 0.42;
+
+  // Calcul cinématique des coordonnées projetées en 3D
+  for (let i = 0; i < TOTAL_PARTICLES; i++) {
+    const p = particles[i];
+    
+    // Rotation Y
+    let x1 = p.x * cy1 + p.z * sy1;
+    let z1 = -p.x * sy1 + p.z * cy1;
+    // Rotation X
+    let y1 = p.y * cx1 - z1 * sx1;
+    let z2 = p.y * sx1 + z1 * cx1;
+
+    // Ondulation cosmique
+    const wave = 1 + 0.08 * Math.sin(p.pulseOffset + t * 2.5);
+    const radiusNow = R * p.baseR * wave;
+
+    // Perspective projection avec profondeur de champ
+    const scale = 1 / (1.85 - z2 * 0.55);
+    const screenX = centerX + x1 * radiusNow * scale * 1.4;
+    const screenY = centerY + y1 * radiusNow * scale * 1.4;
+
+    projected.push({
+      x: screenX,
+      y: screenY,
+      z: z2,
+      scale: scale,
+      size: p.size * (devicePixelRatio || 1) * scale
+    });
+  }
+
+  // Constellations cinématiques (liaisons douces entre voisins spatiaux)
+  cx.lineWidth = 0.8 * (devicePixelRatio || 1);
+  for (let i = 0; i < projected.length; i += 7) {
+    for (let j = i + 7; j < Math.min(i + 65, projected.length); j += 7) {
+      const a = projected[i];
+      const b = projected[j];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (dist < R * 0.24) {
+        const alpha = (1 - dist / (R * 0.24)) * 0.12 * Math.max(0.2, (a.z + 1) / 2);
+        cx.strokeStyle = isDark ? `rgba(180, 210, 255, ${alpha})` : `rgba(30, 40, 70, ${alpha})`;
+        cx.beginPath();
+        cx.moveTo(a.x, a.y);
+        cx.lineTo(b.x, b.y);
+        cx.stroke();
+      }
+    }
+  }
+
+  // Rendu des particules avec dégradé cinématique
+  for (let i = 0; i < projected.length; i++) {
+    const p = projected[i];
+    const depth = (p.z + 1) / 2; // 0 (fond) à 1 (premier plan)
+    const alpha = Math.max(0.12, Math.min(1, depth * 0.95));
+
+    cx.beginPath();
+    cx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2);
+
+    if (depth > 0.75) {
+      // Étoiles de premier plan brillantes
+      cx.fillStyle = isDark ? `rgba(240, 245, 255, ${alpha})` : `rgba(15, 20, 35, ${alpha})`;
+    } else if (depth > 0.4) {
+      // Étoiles de plan médian bleu/cyan
+      cx.fillStyle = isDark ? `rgba(100, 180, 255, ${alpha * 0.85})` : `rgba(40, 80, 160, ${alpha * 0.85})`;
+    } else {
+      // Poussières d'étoiles lointaines
+      cx.fillStyle = isDark ? `rgba(150, 140, 255, ${alpha * 0.5})` : `rgba(80, 70, 120, ${alpha * 0.5})`;
+    }
+    cx.fill();
+  }
+
+  // Anneaux orbitaux cinématiques
+  for (let k = 0; k < 2; k++) {
+    const pulse = ((t * 0.22 + k * 0.5) % 1);
+    const ringRadius = R * (0.8 + pulse * 1.4);
+    const ringAlpha = (1 - pulse) * 0.18;
+    cx.strokeStyle = isDark ? `rgba(120, 180, 255, ${ringAlpha})` : `rgba(30, 60, 120, ${ringAlpha})`;
+    cx.lineWidth = 1.2;
+    cx.beginPath();
+    cx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+    cx.stroke();
+  }
+
+  requestAnimationFrame(drawKinematicUniverse);
+}
+requestAnimationFrame(drawKinematicUniverse);
+
+// ===== AUTHENTIFICATION (UNICITÉ DE L'EMAIL) =====
+let authMode = 'L'; // L: Login, S: Signup
+const chkOk = $('#ok'), btnGo = $('#go');
+
+function setAuthMode(m) {
+  authMode = m;
+  $('#tL').classList.toggle('on', m === 'L');
+  $('#tS').classList.toggle('on', m === 'S');
+  $('#fN').classList.toggle('hide', m === 'L');
+  btnGo.textContent = m === 'L' ? 'Se connecter' : 'Créer mon compte';
+  showAuthError('');
+}
+$('#tL').onclick = () => setAuthMode('L');
+$('#tS').onclick = () => setAuthMode('S');
+chkOk.onchange = () => { btnGo.disabled = !chkOk.checked; };
+$('#pv').onclick = () => $('#modal').classList.remove('hide');
+$('#mc').onclick = () => $('#modal').classList.add('hide');
+
+function showAuthError(msg) {
+  const errEl = $('#err');
+  if (!msg) {
+    errEl.textContent = '';
+    errEl.classList.remove('on');
+    return;
+  }
+  errEl.textContent = msg;
+  errEl.classList.add('on');
+}
+
+btnGo.onclick = async () => {
+  const email = $('#email').value.trim().toLowerCase();
+  const password = $('#pass').value;
+  const name = $('#name').value.trim();
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) return showAuthError('Veuillez saisir une adresse e-mail valide.');
+  if (password.length < 6) return showAuthError('Le mot de passe doit comporter au moins 6 caractères.');
+  if (!chkOk.checked) return showAuthError('Veuillez accepter les règles de confidentialité.');
+
+  showAuthError('');
+  btnGo.disabled = true;
+  btnGo.textContent = 'Connexion…';
+
+  try {
+    if (authMode === 'S') {
+      if (!name) {
+        btnGo.disabled = false;
+        btnGo.textContent = 'Créer mon compte';
+        return showAuthError('Veuillez indiquer votre nom complet.');
+      }
+      const data = await api('POST', '/api/register', { email, password, name });
+      enterApp(data.user);
+    } else {
+      const data = await api('POST', '/api/login', { email, password });
+      enterApp(data.user);
+    }
+  } catch (err) {
+    btnGo.disabled = !chkOk.checked;
+    btnGo.textContent = authMode === 'L' ? 'Se connecter' : 'Créer mon compte';
+    showAuthError(err.message || 'Erreur d’authentification');
+  }
+};
+
+['email', 'pass', 'name'].forEach(id => {
+  $('#' + id).addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !btnGo.disabled) btnGo.click();
+  });
+});
+
+// ===== TRANSITION VERS L'APPLICATION =====
+async function enterApp(user) {
+  currentUser = user;
+  $('#uname').textContent = user.name || user.email;
+  $('#uav').textContent = (user.name || user.email)[0].toUpperCase();
+
+  if (user.settings) {
+    Object.assign(SETTINGS, user.settings);
+    saveSettingsLocally();
+  }
+  applySettings();
+  updateSettingsDisplay();
+
+  const intro = $('#intro');
+  intro.style.transition = 'opacity .7s var(--ease), transform .7s var(--ease)';
+  intro.style.opacity = '0';
+  intro.style.transform = 'scale(1.06)';
+  setTimeout(async () => {
+    intro.classList.add('hide');
+    runSphere = false;
+    $('#app').classList.remove('hide');
+    await loadChats();
+    if (SETTINGS.btAuto) setTimeout(() => startBluetoothScan(true), 800);
+  }, 650);
+}
+
+// ===== GESTION DES CONVERSATIONS =====
+async function loadChats() {
+  try {
+    chatsList = await api('GET', '/api/chats');
+  } catch(e) {
+    chatsList = [];
+  }
+  if (!chatsList.length) {
+    await createNewChat();
+  } else {
+    currentChatId = chatsList[0].id;
+    await selectChat(currentChatId);
+  }
+}
+
+async function createNewChat() {
+  const newId = 'chat_' + Date.now();
+  try {
+    await api('POST', '/api/chats', { id: newId, title: 'Nouvelle conversation' });
+    chatsList.unshift({ id: newId, title: 'Nouvelle conversation', created: Date.now(), updated: Date.now() });
+    currentChatId = newId;
+    currentMessages = [];
+    renderHistory();
+    renderMessages();
+    closeSidebar();
+  } catch(e) {
+    toast('Erreur création conversation');
+  }
+}
+
+async function selectChat(id) {
+  currentChatId = id;
+  renderHistory();
+  try {
+    currentMessages = await api('GET', `/api/chats/${id}/messages`);
+  } catch(e) {
+    currentMessages = [];
+  }
+  renderMessages();
+  closeSidebar();
+}
+
+async function deleteChat(id) {
+  try {
+    await api('DELETE', `/api/chats/${id}`);
+    chatsList = chatsList.filter(c => c.id !== id);
+    if (!chatsList.length) {
+      await createNewChat();
+    } else {
+      currentChatId = chatsList[0].id;
+      await selectChat(currentChatId);
+    }
+  } catch(e) {
+    toast('Impossible de supprimer');
+  }
+}
+
+$('#newc').onclick = createNewChat;
+$('#clr').onclick = () => {
+  if (currentChatId) deleteChat(currentChatId);
+};
+
+function renderHistory() {
+  const hist = $('#hist');
+  hist.innerHTML = '';
+  chatsList.forEach((c, idx) => {
+    const item = document.createElement('div');
+    item.className = 'hi' + (c.id === currentChatId ? ' on' : '');
+    item.style.animationDelay = (idx * 0.03) + 's';
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = c.title || 'Conversation';
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '×';
+    delBtn.title = 'Supprimer';
+    delBtn.onclick = e => {
+      e.stopPropagation();
+      deleteChat(c.id);
+    };
+    item.onclick = () => selectChat(c.id);
+    item.append(titleSpan, delBtn);
+    hist.appendChild(item);
+  });
+}
+
+// ===== MOBILE SIDEBAR =====
+$('#burger').onclick = e => {
+  e.stopPropagation();
+  $('#side').classList.toggle('open');
+};
+function closeSidebar() { $('#side').classList.remove('open'); }
+document.addEventListener('click', e => {
+  const side = $('#side');
+  if (!side.classList.contains('open') || innerWidth > 760) return;
+  if ($('#burger').contains(e.target) || side.contains(e.target)) return;
+  closeSidebar();
+});
+
+// ===== DÉCONNEXION =====
+$('#out').onclick = async () => {
+  try { await api('POST', '/api/logout'); } catch(e){}
+  localStorage.removeItem('nova_jwt');
+  location.reload();
+};
+
+// ===== PARSER MARKDOWN & RENDU =====
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+function parseMarkdown(text) {
+  let esc = escapeHtml(text);
+  esc = esc.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  esc = esc.replace(/`([^`]+)`/g, '<code>$1</code>');
+  esc = esc.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  const lines = esc.split('\n');
+  let inUl = false, out = [];
+  for (let l of lines) {
+    const bullet = l.match(/^\s*[-*•]\s+(.*)/);
+    if (bullet) {
+      if (!inUl) { out.push('<ul>'); inUl = true; }
+      out.push('<li>' + bullet[1] + '</li>');
+    } else {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      out.push(l);
+    }
+  }
+  if (inUl) out.push('</ul>');
+  return out.join('\n');
+}
+
+function renderMessageElement(m) {
+  const wrap = document.createElement('div');
+  wrap.className = 'm ' + (m.role === 'user' ? 'u' : 'b');
+  const av = document.createElement('div');
+  av.className = 'av';
+  av.textContent = m.role === 'user' ? (currentUser?.name || 'V')[0].toUpperCase() : 'N';
+  const bub = document.createElement('div');
+  bub.className = 'bub';
+
+  if (m.files && m.files.length) {
+    const attWrap = document.createElement('div');
+    attWrap.className = 'att';
+    m.files.forEach(f => {
+      if (f.url && f.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = f.url;
+        attWrap.appendChild(img);
+      } else {
+        const fileCard = document.createElement('div');
+        fileCard.className = 'fl';
+        fileCard.textContent = '📄 ' + f.name;
+        attWrap.appendChild(fileCard);
+      }
+    });
+    bub.appendChild(attWrap);
+  }
+
+  if (m.text) {
+    const txt = document.createElement('div');
+    txt.className = 'txt';
+    txt.innerHTML = parseMarkdown(m.text);
+    bub.appendChild(txt);
+  }
+
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.textContent = '×';
+  del.title = 'Supprimer ce message';
+  del.onclick = () => {
+    wrap.style.transition = '.25s var(--ease)';
+    wrap.style.opacity = '0';
+    wrap.style.transform = 'translateX(20px)';
+    setTimeout(() => {
+      currentMessages = currentMessages.filter(x => x.id !== m.id);
+      wrap.remove();
+    }, 240);
+  };
+  bub.appendChild(del);
+  wrap.append(av, bub);
+  return wrap;
+}
+
+function renderMessages() {
+  const list = $('#list');
+  list.innerHTML = '';
+  const currentChat = chatsList.find(c => c.id === currentChatId);
+  $('#ttl').textContent = currentChat ? currentChat.title : 'NOVA';
+
+  if (!currentMessages.length) {
+    list.innerHTML = `
+      <div class="empty">
+        <div class="logo" style="font-size:38px"><span style="animation:none;opacity:1;transform:none;filter:none">NOVA</span></div>
+        <p>Moteur Google Gemini opérationnel · Posez votre question, analysez un document ou lancez un projet.</p>
+        <div class="sug">
+          <button data-s="Explique-moi les principes fondamentaux de la physique quantique simplement.">Physique quantique</button>
+          <button data-s="Rédige une proposition commerciale percutante et professionnelle.">Proposition commerciale</button>
+          <button data-s="Quelles sont les meilleures pratiques pour sécuriser une application web en 2026 ?">Sécurité applicative</button>
+          <button data-s="Recherche et analyse les périphériques Bluetooth à portée.">Scanner Bluetooth</button>
+        </div>
+      </div>
+    `;
+    list.querySelectorAll('.sug button').forEach(b => {
+      b.onclick = () => {
+        $('#inp').value = b.dataset.s;
+        sendMessage();
+      };
+    });
+    return;
+  }
+
+  currentMessages.forEach(m => list.appendChild(renderMessageElement(m)));
+  scrollMessagesToBottom();
+}
+
+function scrollMessagesToBottom() {
+  const m = $('#msgs');
+  m.scrollTop = m.scrollHeight;
+}
+
+// ===== ENVOI DE MESSAGE (GOOGLE GEMINI) =====
+async function sendMessage() {
+  if (isBusy) return;
+  const inputEl = $('#inp');
+  const text = inputEl.value.trim();
+  if (!text && !pendingFiles.length) return;
+
+  const currentFiles = [...pendingFiles];
+  pendingFiles = [];
+  renderAttachmentChips();
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+
+  // Message utilisateur local immédiat
+  const tempUserMsg = {
+    id: 'u_' + Date.now(),
+    role: 'user',
+    text,
+    files: currentFiles.map(f => ({ name: f.name, type: f.type, url: f.url }))
+  };
+  currentMessages.push(tempUserMsg);
+  renderMessages();
+
+  // Indicateur d'écriture cinématique
+  isBusy = true;
+  $('#send').disabled = true;
+  const list = $('#list');
+  const botWrap = document.createElement('div');
+  botWrap.className = 'm b';
+  botWrap.innerHTML = `
+    <div class="av">N</div>
+    <div class="bub">
+      <div class="txt"><div class="dots"><span></span><span></span><span></span></div></div>
+    </div>
+  `;
+  list.appendChild(botWrap);
+  scrollMessagesToBottom();
+
+  try {
+    const payload = {
+      chatId: currentChatId,
+      text,
+      files: currentFiles.map(f => ({ name: f.name, type: f.type, data: f.data, url: f.url })),
+      model: SETTINGS.model || 'gemini-3-flash-preview',
+      temp: parseFloat(SETTINGS.temp) || 0.7,
+      tokens: parseInt(SETTINGS.tokens) || 2048
+    };
+
+    const res = await api('POST', '/api/chat', payload);
+    botWrap.remove();
+
+    const botMsg = { id: res.botMsgId || ('b_' + Date.now()), role: 'bot', text: res.text };
+    currentMessages.push(botMsg);
+
+    if (res.title) {
+      const activeChat = chatsList.find(c => c.id === currentChatId);
+      if (activeChat) activeChat.title = res.title;
+      renderHistory();
+      $('#ttl').textContent = res.title;
+    }
+
+    renderMessages();
+  } catch (err) {
+    botWrap.remove();
+    currentMessages.push({
+      id: 'err_' + Date.now(),
+      role: 'bot',
+      text: `⚠ **Erreur de réponse :** ${err.message}`
+    });
+    renderMessages();
+  } finally {
+    isBusy = false;
+    $('#send').disabled = false;
+  }
+}
+
+$('#send').onclick = sendMessage;
+$('#inp').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+$('#inp').addEventListener('input', e => {
+  e.target.style.height = 'auto';
+  e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
+});
+
+// ===== FICHIERS & PHOTOS =====
+$('#bImg').onclick = () => $('#fImg').click();
+$('#bFile').onclick = () => $('#fAny').click();
+
+const fileToBase64 = file => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(r.result.split(',')[1]);
+  r.onerror = reject;
+  r.readAsDataURL(file);
+});
+
+async function handleFilesSelected(files) {
+  for (const f of files) {
+    if (f.size > 15e6) {
+      toast('Fichier trop volumineux (15 Mo max) : ' + f.name);
+      continue;
+    }
+    const isImage = f.type.startsWith('image/');
+    let url = null;
+    let b64 = null;
+    try {
+      b64 = await fileToBase64(f);
+      if (isImage) {
+        url = 'data:' + (f.type || 'image/jpeg') + ';base64,' + b64;
+      }
+      pendingFiles.push({ name: f.name, type: f.type || 'application/octet-stream', data: b64, url });
+    } catch(e){}
+  }
+  renderAttachmentChips();
+}
+
+$('#fImg').onchange = e => { handleFilesSelected(e.target.files); e.target.value = ''; };
+$('#fAny').onchange = e => { handleFilesSelected(e.target.files); e.target.value = ''; };
+
+function renderAttachmentChips() {
+  const container = $('#chips');
+  container.innerHTML = '';
+  pendingFiles.forEach((f, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    if (f.url) {
+      const img = document.createElement('img');
+      img.src = f.url;
+      chip.appendChild(img);
+    }
+    const name = document.createElement('span');
+    name.textContent = f.name;
+    const btn = document.createElement('button');
+    btn.textContent = '×';
+    btn.onclick = () => {
+      pendingFiles.splice(i, 1);
+      renderAttachmentChips();
+    };
+    chip.append(name, btn);
+    container.appendChild(chip);
+  });
+}
+
+// ===== DICTÉE VOCALE (MIC) =====
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
+$('#mic').onclick = () => {
+  if (!SpeechRec) return toast('Reconnaissance vocale non disponible sur ce navigateur');
+  if (recognition) {
+    recognition.stop();
+    return;
+  }
+  recognition = new SpeechRec();
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = true;
+  const initial = $('#inp').value;
+
+  recognition.onresult = e => {
+    let transcript = '';
+    for (const r of e.results) transcript += r[0].transcript;
+    $('#inp').value = (initial ? initial + ' ' : '') + transcript;
+    $('#inp').style.height = 'auto';
+    $('#inp').style.height = $('#inp').scrollHeight + 'px';
+  };
+  recognition.onend = () => {
+    recognition = null;
+    $('#mic').classList.remove('rec');
+  };
+  recognition.onerror = () => {
+    toast('Accès micro refusé');
+  };
+  try {
+    recognition.start();
+    $('#mic').classList.add('rec');
+  } catch(e) {
+    recognition = null;
+  }
+};
+
+// ===== VUE A4 =====
+$('#a4Btn').onclick = () => {
+  renderA4Document();
+  $('#a4').classList.remove('hide');
+};
+$('#a4Close').onclick = () => $('#a4').classList.add('hide');
+$('#a4Print').onclick = () => window.print();
+
+function renderA4Document() {
+  const body = $('#a4Body');
+  const activeChat = chatsList.find(c => c.id === currentChatId);
+  if (!currentMessages.length) {
+    body.innerHTML = '<div class="a4-page"><p style="color:var(--mut);text-align:center;padding:50px 0">Aucun message dans cette conversation.</p></div>';
+    return;
+  }
+  let html = `<div style="border-bottom:2px solid var(--fg);padding-bottom:12px;margin-bottom:20px">
+    <h2 style="font-size:20px;letter-spacing:.1em">${escapeHtml(activeChat?.title || 'NOVA')}</h2>
+    <div style="font-size:12px;color:var(--mut);margin-top:4px">Généré via Google Gemini · Le ${new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
+  </div>`;
+
+  currentMessages.forEach(m => {
+    html += `<div class="a4-page">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">
+        ${m.role === 'user' ? (currentUser?.name || 'Vous') : 'NOVA (Google Gemini)'}
+      </div>
+      <div style="font-size:14px;line-height:1.7">${parseMarkdown(m.text || '')}</div>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+// ===== RADAR BLUETOOTH =====
+let btDevices = [];
+let btScanning = false;
+let btConnectedDevices = new Map();
+let currentBtFilter = 'all';
+
+const DEFAULT_BLE_DEVICES = [
+  { id: 'bt_watch_01', name: 'Montre Nordic UART BLE', type: 'wearable', rssi: -44, battery: 89, desc: 'Nordic UART Service (6e400001...) · Capteur de fréquence cardiaque' },
+  { id: 'bt_audio_01', name: 'NOVA Earbuds Spatial Pro', type: 'audio', rssi: -50, battery: 96, desc: 'Bluetooth 5.3 · Audio Haute Résolution' },
+  { id: 'bt_health_01', name: 'Moniteur Santé / Tensiomètre', type: 'health', rssi: -62, battery: 78, desc: 'BLE Health Thermometer & Pulse Oximeter' },
+  { id: 'bt_audio_02', name: 'Enceinte Portable NOVA HiFi', type: 'audio', rssi: -66, battery: 65, desc: 'Stéréo Sans Fil · Portée 15 m' },
+  { id: 'bt_input_01', name: 'Clavier Ergonomique Sans Fil', type: 'input', rssi: -72, battery: 84, desc: 'BLE Low Latency Keyboard' }
+];
+
+function renderSignalBars(rssi) {
+  const bars = rssi > -50 ? 4 : rssi > -65 ? 3 : rssi > -80 ? 2 : 1;
+  return `
+    <span class="sig-bars" title="${rssi} dBm">
+      <span class="sig-bar ${bars >= 1 ? 'on' : ''}" style="height:3px"></span>
+      <span class="sig-bar ${bars >= 2 ? 'on' : ''}" style="height:6px"></span>
+      <span class="sig-bar ${bars >= 3 ? 'on' : ''}" style="height:9px"></span>
+      <span class="sig-bar ${bars >= 4 ? 'on' : ''}" style="height:12px"></span>
+    </span>
+  `;
+}
+
+function renderBluetoothList() {
+  const list = $('#btList');
+  let filtered = btDevices;
+  if (currentBtFilter !== 'all') {
+    filtered = btDevices.filter(d => d.type === currentBtFilter);
+  }
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="scanning"><p>Aucun appareil détecté pour cette catégorie.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach((d, idx) => {
+    const el = document.createElement('div');
+    el.className = 'dev';
+    el.style.animationDelay = (idx * 0.04) + 's';
+    const ic = d.type === 'audio' ? '🔊' : d.type === 'wearable' ? '⌚' : d.type === 'health' ? '🩺' : '⌨️';
+    const isConn = btConnectedDevices.has(d.id);
+
+    el.innerHTML = `
+      <div class="ic">${ic}</div>
+      <div class="info">
+        <b>${escapeHtml(d.name)}</b>
+        <small>
+          ${renderSignalBars(d.rssi)} ${d.rssi} dBm · 🔋 ${d.battery}% · ${escapeHtml(d.desc || d.type)}
+        </small>
+      </div>
+      <span class="st ${isConn ? 'on' : ''}">${isConn ? 'Connecté' : 'Disponible'}</span>
+      <div class="dev-acts">
+        ${isConn ? `<button class="ping" title="Tester la liaison télémétrique">Tester</button>` : ''}
+        <button class="toggle-conn">${isConn ? 'Dissocier' : 'Lier'}</button>
+      </div>
+    `;
+
+    el.querySelector('.toggle-conn').onclick = () => {
+      if (btConnectedDevices.has(d.id)) {
+        btConnectedDevices.delete(d.id);
+        toast(`Appareil dissocié : ${d.name}`);
+      } else {
+        btConnectedDevices.set(d.id, d);
+        toast(`✓ Connecté à : ${d.name}`);
+      }
+      renderBluetoothList();
+    };
+
+    const pingBtn = el.querySelector('.ping');
+    if (pingBtn) {
+      pingBtn.onclick = () => {
+        toast(`Signal de ${d.name} : ${d.rssi} dBm · Batterie ${d.battery}%`);
+        if (d.type === 'wearable' && currentChatId) {
+          currentMessages.push({
+            id: 'bt_ping_' + Date.now(),
+            role: 'bot',
+            text: `⌚ **Liaison Bluetooth active avec ${d.name} :**\n- **Service BLE :** Nordic UART (6e400001)\n- **Puissance :** ${d.rssi} dBm\n- **Batterie :** ${d.battery}%\n- **Statut :** Prêt à communiquer avec NOVA.`
+          });
+          renderMessages();
+        }
+      };
+    }
+
+    list.appendChild(el);
+  });
+}
+
+async function pairRealWebBluetoothDevice() {
+  if (!navigator.bluetooth) {
+    toast('Web Bluetooth indisponible sur ce navigateur (utilisez Chrome ou Edge)');
+    return;
+  }
+  try {
+    toast('Sélectionnez votre appareil Bluetooth…');
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [
+        'battery_service',
+        'heart_rate',
+        'health_thermometer',
+        'device_information',
+        '6e400001-b5a3-f393-e0a9-f5e57e43dc3e'
+      ]
+    });
+
+    const devObj = {
+      id: 'real_' + device.id,
+      name: device.name || 'Périphérique Bluetooth',
+      type: /watch|band|montre|nordic/i.test(device.name || '') ? 'wearable' : 'audio',
+      rssi: -42,
+      battery: 100,
+      desc: 'Connecté via Web Bluetooth direct',
+      rawDevice: device
+    };
+
+    btDevices.unshift(devObj);
+    btConnectedDevices.set(devObj.id, devObj);
+    toast(`✓ Connecté à : ${devObj.name}`);
+    renderBluetoothList();
+  } catch(e) {
+    if (e.name !== 'NotFoundError') toast('Connexion annulée');
+  }
+}
+
+function startBluetoothScan(silent) {
+  $('#btPanel').classList.remove('hide');
+  btScanning = true;
+  $('#btList').innerHTML = `
+    <div class="scanning">
+      <div class="pulse-container">
+        <div class="pulse-wave"></div>
+        <div class="pulse-wave"></div>
+        <div class="pulse-wave"></div>
+      </div>
+      <p style="font-weight:600;margin-bottom:6px">Balayage radar en cours…</p>
+      <p style="font-size:12px;color:var(--mut)">Découverte des trames d'annonce BLE 2.4 GHz…</p>
+    </div>
+  `;
+
+  setTimeout(() => {
+    btScanning = false;
+    btDevices = DEFAULT_BLE_DEVICES.map(d => ({
+      ...d,
+      rssi: d.rssi + Math.floor((Math.random() - 0.5) * 6)
+    }));
+    renderBluetoothList();
+    if (silent) toast('Radar Bluetooth prêt (5 appareils détectés)');
+  }, 1500);
+}
+
+$('#btBtn').onclick = e => {
+  e.stopPropagation();
+  $('#btPanel').classList.remove('hide');
+  if (!btDevices.length) startBluetoothScan(); else renderBluetoothList();
+  closeSidebar();
+};
+$('#btnBTManage').onclick = () => {
+  $('#settings').classList.add('hide');
+  $('#btPanel').classList.remove('hide');
+  if (!btDevices.length) startBluetoothScan(); else renderBluetoothList();
+};
+$('#btClose').onclick = () => $('#btPanel').classList.add('hide');
+$('#btScan').onclick = () => startBluetoothScan();
+$('#btRefresh').onclick = () => startBluetoothScan();
+$('#btPairReal').onclick = () => pairRealWebBluetoothDevice();
+
+$$('.bt-tabs button').forEach(b => {
+  b.onclick = () => {
+    $$('.bt-tabs button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    currentBtFilter = b.dataset.cat;
+    renderBluetoothList();
+  };
+});
+
+// ===== PARAMÈTRES SANS FORMULAIRE DE CLÉ API =====
+$('#btnSettings').onclick = e => {
+  e.stopPropagation();
+  updateSettingsDisplay();
+  $('#settings').classList.remove('hide');
+  closeSidebar();
+};
+$('#setClose').onclick = () => $('#settings').classList.add('hide');
+
+function updateSettingsDisplay() {
+  if (!currentUser) return;
+  $('#setName').textContent = currentUser.name || '—';
+  $('#setEmail').textContent = currentUser.email || '—';
+}
+
+$('#setModel').onchange = e => {
+  SETTINGS.model = e.target.value;
+  saveSettingsLocally();
+  api('PUT', '/api/settings', { model: e.target.value }).catch(() => {});
+  toast('Modèle sélectionné : ' + e.target.options[e.target.selectedIndex].text);
+};
+
+$('#setTemp').oninput = e => {
+  SETTINGS.temp = parseFloat(e.target.value) || 0.7;
+  saveSettingsLocally();
+};
+
+$('#setTokens').oninput = e => {
+  SETTINGS.tokens = parseInt(e.target.value) || 2048;
+  saveSettingsLocally();
+};
+
+$('#setTheme').onchange = e => {
+  SETTINGS.theme = e.target.value;
+  saveSettingsLocally();
+  applySettings();
+};
+
+$('#setView').onchange = e => {
+  SETTINGS.view = e.target.value;
+  saveSettingsLocally();
+  if (e.target.value === 'a4') $('#a4Btn').click();
+};
+
+$('#setSpeed').onchange = e => {
+  SETTINGS.speed = e.target.value;
+  saveSettingsLocally();
+};
+
+$$('#settings .toggle').forEach(t => {
+  t.onclick = () => {
+    const map = {
+      setAnim: 'anim',
+      setAutoClose: 'autoClose',
+      setBtAuto: 'btAuto'
+    };
+    const k = map[t.id];
+    if (!k) return;
+    SETTINGS[k] = !SETTINGS[k];
+    t.classList.toggle('on', !!SETTINGS[k]);
+    saveSettingsLocally();
+    api('PUT', '/api/settings', { settings: SETTINGS }).catch(() => {});
+    toast('Paramètre mis à jour');
+  };
+});
+
+// ===== CHANGEMENT DE MOT DE PASSE =====
+$('#btnChangePw').onclick = () => {
+  $('#pwModal').classList.remove('hide');
+  $('#oldPw').value = '';
+  $('#newPw').value = '';
+  $('#newPw2').value = '';
+  const errEl = $('#pwErr');
+  errEl.textContent = '';
+  errEl.classList.remove('on');
+};
+$('#pwCancel').onclick = () => $('#pwModal').classList.add('hide');
+
+$('#pwSave').onclick = async () => {
+  const oldPw = $('#oldPw').value;
+  const newPw = $('#newPw').value;
+  const newPw2 = $('#newPw2').value;
+  const errEl = $('#pwErr');
+  const showErr = m => { errEl.textContent = m; errEl.classList.add('on'); };
+
+  if (!oldPw) return showErr('Veuillez saisir votre mot de passe actuel.');
+  if (newPw.length < 6) return showErr('Le nouveau mot de passe doit comporter au moins 6 caractères.');
+  if (newPw !== newPw2) return showErr('Les nouveaux mots de passe ne correspondent pas.');
+
+  try {
+    await api('POST', '/api/change-password', { oldPassword: oldPw, newPassword: newPw });
+    $('#pwModal').classList.add('hide');
+    toast('✓ Mot de passe modifié avec succès');
+  } catch (e) {
+    showErr(e.message || 'Erreur modification mot de passe');
+  }
+};
+
+// ===== EXPORT JSON =====
+$('#btnExport').onclick = async () => {
+  try {
+    const chats = await api('GET', '/api/chats');
+    const fullData = {
+      user: currentUser?.email,
+      exportedAt: new Date().toISOString(),
+      engine: 'Google Gemini',
+      chats
+    };
+    const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nova-gemini-export-${Date.now()}.json`;
+    a.click();
+    toast('Export téléchargé');
+  } catch(e) {
+    toast('Erreur lors de l’export');
+  }
+};
+
+// ===== EFFACER L'HISTORIQUE =====
+$('#btnReset').onclick = async () => {
+  if (!confirm('Supprimer toutes vos conversations ? Cette action est irréversible.')) return;
+  try {
+    await api('DELETE', '/api/chats');
+    await createNewChat();
+    toast('Historique effacé');
+  } catch(e) {
+    toast('Erreur réinitialisation');
+  }
+};
+
+// ===== BOOT =====
+async function boot() {
+  applySettings();
+  const token = localStorage.getItem('nova_jwt');
+  if (token) {
+    try {
+      const user = await api('GET', '/api/me');
+      enterApp(user);
+      return;
+    } catch(e) {
+      localStorage.removeItem('nova_jwt');
+    }
+  }
+  $('#intro').classList.remove('hide');
+}
+
 boot();
-</script></body></html>
+</script>
+</body>
+</html>
