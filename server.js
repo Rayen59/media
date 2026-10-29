@@ -1,7 +1,7 @@
 const express=require('express'),Database=require('better-sqlite3'),bcrypt=require('bcryptjs'),jwt=require('jsonwebtoken'),
 cookie=require('cookie-parser'),nodemailer=require('nodemailer'),crypto=require('crypto'),path=require('path');
 const E=process.env,SECRET=E.JWT_SECRET||'dev-secret-change-me',KEY=crypto.createHash('sha256').update(SECRET).digest();
-const db=new Database('mediassist.db');db.pragma('journal_mode=WAL');
+const db=new Database(process.env.DB_PATH||'mediassist.db');db.pragma('journal_mode=WAL');
 db.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY,email TEXT UNIQUE NOT NULL COLLATE NOCASE,pass TEXT NOT NULL,verified INTEGER DEFAULT 0,apikey TEXT,profile TEXT DEFAULT '{}',created INTEGER);
 CREATE TABLE IF NOT EXISTS codes(email TEXT PRIMARY KEY COLLATE NOCASE,code TEXT,exp INTEGER,tries INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS msgs(id INTEGER PRIMARY KEY,uid INTEGER NOT NULL,role TEXT,text TEXT,lang TEXT,ts INTEGER);
@@ -13,10 +13,11 @@ const hits=new Map();const limit=(n,ms)=>(q,r,x)=>{const k=q.ip+q.path,t=Date.no
 async function sendCode(email){
   const code=String(crypto.randomInt(100000,1000000));
   db.prepare('REPLACE INTO codes(email,code,exp,tries) VALUES(?,?,?,0)').run(email,code,Date.now()+10*60e3);
-  if(mail)await mail.sendMail({from:E.MAIL_FROM||E.SMTP_USER,to:email,subject:'Votre code MediAssist',text:`Votre code de vérification : ${code}\nValable 10 minutes.`});
+  if(E.BREVO_KEY){const r=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'api-key':E.BREVO_KEY,'content-type':'application/json'},body:JSON.stringify({sender:{email:E.MAIL_FROM},to:[{email}],subject:'Votre code MediAssist',textContent:`Votre code de vérification : ${code}\nValable 10 minutes.`})});if(!r.ok)throw new Error('mail '+r.status)}
+  else if(mail)await mail.sendMail({from:E.MAIL_FROM||E.SMTP_USER,to:email,subject:'Votre code MediAssist',text:`Votre code de vérification : ${code}\nValable 10 minutes.`});
   else console.log(`[DEV] Code pour ${email} : ${code}`);
 }
-const app=express();app.use(express.json({limit:'30mb'}),cookie(),express.static(path.join(__dirname,'public')));
+const app=express();app.set('trust proxy',1);app.use(express.json({limit:'30mb'}),cookie(),express.static(path.join(__dirname,'public')));
 const auth=(q,r,x)=>{try{const p=jwt.verify(q.cookies.t,SECRET);q.u=db.prepare('SELECT * FROM users WHERE id=?').get(p.id);if(!q.u)throw 0;x()}catch{r.status(401).json({error:'Non connecté'})}};
 const setTok=(r,id)=>r.cookie('t',jwt.sign({id},SECRET,{expiresIn:'30d'}),{httpOnly:true,sameSite:'lax',secure:!!E.COOKIE_SECURE,maxAge:30*864e5});
 const okEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)&&e.length<255;
