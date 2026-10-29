@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NOVA — Assistant IA</title>
-<meta name="description" content="Assistant IA professionnel de nouvelle génération propulsé par Google Gemini avec vue A4, cinématique 3D et scanner Bluetooth.">
+<meta name="description" content="Assistant IA d'élite développé par Med Rayen Bouazizi, CEO of MK avec vue A4, cinématique 3D et scanner Bluetooth.">
 <meta property="og:title" content="NOVA — Assistant IA">
-<meta property="og:description" content="Assistant IA professionnel de nouvelle génération propulsé par Google Gemini avec vue A4, cinématique 3D et scanner Bluetooth.">
+<meta property="og:description" content="Assistant IA d'élite développé par Med Rayen Bouazizi, CEO of MK avec vue A4, cinématique 3D et scanner Bluetooth.">
 <style>
 :root{
   --bg:#fff;--fg:#0a0a0a;--mut:#6b6b6b;--line:#e4e4e4;--card:#f5f5f5;--inv:#0a0a0a;--invfg:#fff;
@@ -69,7 +69,8 @@ button:active{transform:scale(.97)}
 #side{width:290px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--card);transition:transform .35s var(--ease);z-index:30;position:relative}
 .sh{padding:16px;display:flex;align-items:center;justify-content:space-between}
 .brand{font-weight:800;letter-spacing:.3em;font-size:16px;display:flex;align-items:center;gap:6px}
-.brand-gemini{font-size:10px;letter-spacing:.1em;padding:2px 7px;border-radius:6px;background:color-mix(in srgb,var(--blue) 18%,transparent);color:var(--blue);font-weight:600}
+.brand-mk{font-size:10px;letter-spacing:.1em;padding:2px 7px;border-radius:6px;background:color-mix(in srgb,var(--purple) 18%,transparent);color:var(--purple);font-weight:700}
+.brand-gemini{font-size:10px;letter-spacing:.1em;padding:2px 7px;border-radius:6px;background:color-mix(in srgb,var(--purple) 18%,transparent);color:var(--purple);font-weight:700}
 .ib{width:36px;height:36px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);transition:.2s var(--ease);flex:none}
 .ib:hover{background:var(--inv);color:var(--invfg);transform:translateY(-1px)}
 .ib svg,.send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -228,7 +229,7 @@ button:active{transform:scale(.97)}
 <canvas id="cv"></canvas>
 <div class="wrap">
   <div class="logo" id="logo"></div>
-  <div class="tag">Moteur Google Gemini · Cinématique & Précision</div>
+  <div class="tag">Développé par Med Rayen Bouazizi · CEO of MK</div>
   <div class="card">
     <div class="tabs"><button id="tL" class="on">Connexion</button><button id="tS">Créer un compte</button></div>
     <label class="f hide" id="fN"><small>Nom complet</small><input id="name" autocomplete="name" placeholder="Votre nom complet"></label>
@@ -246,7 +247,7 @@ button:active{transform:scale(.97)}
 <h3>Règles de confidentialité</h3>
 <div class="mbody">
 <b>1. Compte & Unicité</b>Chaque adresse e-mail ne peut être enregistrée qu'une seule fois. Vos accès sont protégés par hachage cryptographique bcrypt.
-<b>2. Moteur IA Google Gemini</b>L'intelligence artificielle est propulsée par les modèles Google Gemini directement sur le serveur sécurisé. Aucune clé API personnelle n'est demandée à l'utilisateur.
+<b>2. Intelligence Artificielle NOVA</b>L'assistant NOVA est développé par Med Rayen Bouazizi, CEO of MK, et propulsé directement sur notre infrastructure sécurisée haute performance. Aucune clé API personnelle n'est requise.
 <b>3. Stockage local & Sécurisé</b>Toutes vos conversations sont conservées dans votre base locale. Vous conservez le contrôle total et pouvez exporter ou supprimer vos données à tout moment.
 <b>4. Bluetooth & Télémétrie</b>L'accès Bluetooth est activé uniquement lors de vos scans pour connecter vos montres et capteurs.
 </div>
@@ -257,7 +258,7 @@ button:active{transform:scale(.97)}
 <div id="app" class="hide">
 <aside id="side">
   <div class="sh">
-    <div class="brand">NOVA <span class="brand-gemini">GEMINI</span></div>
+    <div class="brand">NOVA <span class="brand-mk">MK</span></div>
     <div style="display:flex;gap:6px">
       <button class="ib" id="theme" title="Changer de thème"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg></button>
       <button class="ib" id="btnSettings" title="Paramètres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
@@ -287,7 +288,7 @@ button:active{transform:scale(.97)}
       <button class="ib" id="mic" title="Dictée vocale"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/></svg></button>
       <button class="send" id="send" title="Envoyer"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
     </div>
-  </div><div class="note">NOVA propulsé par Google Gemini · Modèles multimodaux haute performance & raisonnement rapide.</div></div>
+  </div><div class="note">NOVA · Développé par Med Rayen Bouazizi, CEO of MK · Modèles d'élite & raisonnement rapide.</div></div>
 </main>
 </div>
 
@@ -313,22 +314,22 @@ button:active{transform:scale(.97)}
       <button class="btn-o" id="setClose">Fermer</button>
     </div>
 
-    <!-- MOTEUR GEMINI INTEGRE -->
+    <!-- MOTEUR IA NOVA -->
     <div class="sec">
-      <h3>Moteur IA Google Gemini</h3>
+      <h3>Moteur IA NOVA</h3>
       <div class="set-row">
         <div>
           <b>État du Moteur IA</b>
-          <small>Clé Gemini intégrée automatiquement côté serveur (zéro configuration requise)</small>
+          <small>Développé par Med Rayen Bouazizi, CEO of MK (zéro configuration requise)</small>
         </div>
         <span class="badge-ok">✓ Prêt & Opérationnel</span>
       </div>
       <div class="set-row" style="margin-top:8px">
-        <div><b>Modèle Gemini</b><small>Moteur d'inférence et de raisonnement</small></div>
+        <div><b>Modèle IA</b><small>Moteur d'inférence et de raisonnement</small></div>
         <select class="sel" id="setModel">
-          <option value="gemini-3-flash-preview">Google Gemini 3 Flash (Recommandé · Vitesse & Esprit)</option>
-          <option value="gemini-3.5-flash">Google Gemini 3.5 Flash (Expert Multimodal)</option>
-          <option value="gemini-3.8-flash">Google Gemini 3.8 Flash (Raisonnement Avancé)</option>
+          <option value="gemini-3-flash-preview">NOVA Ultra Flash (Recommandé · Vitesse & Esprit)</option>
+          <option value="gemini-3.5-flash">NOVA Expert Pro (Expert Multimodal)</option>
+          <option value="gemini-3.8-flash">NOVA Deep Reasoning (Raisonnement Avancé)</option>
         </select>
       </div>
       <div class="set-row">
@@ -374,7 +375,7 @@ button:active{transform:scale(.97)}
       <h3>Données & Sauvegarde</h3>
       <div class="set-row"><div><b>Export complet</b><small>Télécharger toutes les conversations en JSON</small></div><button class="btn-o" id="btnExport">Exporter en JSON</button></div>
       <div class="set-row"><div><b>Réinitialiser l'historique</b><small>Effacer toutes les conversations du serveur</small></div><button class="btn-o" id="btnReset" style="color:var(--red);border-color:var(--red)">Effacer tout</button></div>
-      <div class="set-row"><div><b>Version</b><small>NOVA AI Gemini Edition</small></div><span class="val">v3.0 (Gemini Engine)</span></div>
+      <div class="set-row"><div><b>Concepteur</b><small>Med Rayen Bouazizi, CEO of MK</small></div><span class="val">NOVA v3.0 (MK Edition)</span></div>
     </div>
   </div>
 </div>
@@ -962,7 +963,7 @@ function renderMessages() {
     list.innerHTML = `
       <div class="empty">
         <div class="logo" style="font-size:38px"><span style="animation:none;opacity:1;transform:none;filter:none">NOVA</span></div>
-        <p>Moteur Google Gemini opérationnel · Posez votre question, analysez un document ou lancez un projet.</p>
+        <p>Moteur NOVA opérationnel · Développé par Med Rayen Bouazizi, CEO of MK · Posez votre question, analysez un document ou lancez un projet.</p>
         <div class="sug">
           <button data-s="Explique-moi les principes fondamentaux de la physique quantique simplement.">Physique quantique</button>
           <button data-s="Rédige une proposition commerciale percutante et professionnelle.">Proposition commerciale</button>
@@ -989,7 +990,7 @@ function scrollMessagesToBottom() {
   m.scrollTop = m.scrollHeight;
 }
 
-// ===== ENVOI DE MESSAGE (GOOGLE GEMINI) =====
+// ===== ENVOI DE MESSAGE (NOVA MK) =====
 async function sendMessage() {
   if (isBusy) return;
   const inputEl = $('#inp');
@@ -1189,13 +1190,13 @@ function renderA4Document() {
   }
   let html = `<div style="border-bottom:2px solid var(--fg);padding-bottom:12px;margin-bottom:20px">
     <h2 style="font-size:20px;letter-spacing:.1em">${escapeHtml(activeChat?.title || 'NOVA')}</h2>
-    <div style="font-size:12px;color:var(--mut);margin-top:4px">Généré via Google Gemini · Le ${new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
+    <div style="font-size:12px;color:var(--mut);margin-top:4px">Généré via NOVA · Développé par Med Rayen Bouazizi, CEO of MK · Le ${new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
   </div>`;
 
   currentMessages.forEach(m => {
     html += `<div class="a4-page">
       <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">
-        ${m.role === 'user' ? (currentUser?.name || 'Vous') : 'NOVA (Google Gemini)'}
+        ${m.role === 'user' ? (currentUser?.name || 'Vous') : 'NOVA (MK)'}
       </div>
       <div style="font-size:14px;line-height:1.7">${parseMarkdown(m.text || '')}</div>
     </div>`;
@@ -1487,13 +1488,14 @@ $('#btnExport').onclick = async () => {
     const fullData = {
       user: currentUser?.email,
       exportedAt: new Date().toISOString(),
-      engine: 'Google Gemini',
+      creator: 'Med Rayen Bouazizi, CEO of MK',
+      engine: 'NOVA Intelligence MK',
       chats
     };
     const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `nova-gemini-export-${Date.now()}.json`;
+    a.download = `nova-export-${Date.now()}.json`;
     a.click();
     toast('Export téléchargé');
   } catch(e) {

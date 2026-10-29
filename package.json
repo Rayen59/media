@@ -7,6 +7,9 @@
     "start": "node server.js",
     "build": "node -c server.js"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@google/genai": "^2.32.0",
     "bcryptjs": "^2.4.3",

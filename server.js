@@ -156,7 +156,7 @@ app.post('/api/register', limit(15, 36e5), async (q, r) => {
     db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)')
       .run(defaultChatId, userId, 'Bienvenue sur NOVA', now, now);
 
-    const welcomeMsg = 'Bonjour ' + name + ' ! Je suis **NOVA**, votre assistant d’intelligence artificielle propulsé par le moteur haute performance **Google Gemini**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?';
+    const welcomeMsg = 'Bonjour ' + name + ' ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?';
     db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
       .run('msg_' + now, defaultChatId, userId, 'bot', welcomeMsg, '[]', now);
 
@@ -292,9 +292,10 @@ app.get('/api/chats/:id/messages', auth, (q, r) => {
   r.json(parsed);
 });
 
-// ===== GOOGLE GEMINI AI ENGINE =====
+// ===== NOVA AI ENGINE =====
 
-const NOVA_SYSTEM_PROMPT = `Tu es NOVA, un assistant d'intelligence artificielle hautement qualifié, professionnel, rigoureux et bienveillant, propulsé par Google Gemini.
+const NOVA_SYSTEM_PROMPT = `Tu es NOVA, un assistant d'intelligence artificielle d'élite hautement qualifié, professionnel, rigoureux et bienveillant, développé par Med Rayen Bouazizi, CEO of MK.
+Si l'utilisateur te demande qui t'a créé ou développé, réponds toujours clairement que tu as été développé par Med Rayen Bouazizi, CEO of MK.
 Ton champ d'expertise couvre l'analyse stratégique, la rédaction professionnelle, l'ingénierie logicielle, les sciences, la synthèse de documents et la résolution de problèmes complexes.
 
 Principes fondamentaux :
@@ -330,12 +331,12 @@ async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTo
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error?.message || `Erreur Gemini HTTP ${res.status}`);
+    throw new Error(data.error?.message || `Erreur IA HTTP ${res.status}`);
   }
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
-    throw new Error('Réponse vide du modèle Gemini.');
+    throw new Error('Réponse vide du modèle IA.');
   }
   return text;
 }
@@ -417,7 +418,7 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     }
 
     if (!outputText) {
-      return r.status(502).json({ error: lastError?.message || 'Erreur lors de la génération avec Gemini.' });
+      return r.status(502).json({ error: lastError?.message || 'Erreur lors de la génération avec le moteur IA.' });
     }
 
     const userMsgId = 'msg_' + now + '_u';
@@ -455,4 +456,4 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
 });
 
 const PORT = parseInt(E.PORT || '3000', 10);
-app.listen(PORT, '0.0.0.0', () => console.log('NOVA Assistant IA (Moteur Google Gemini) en écoute sur http://0.0.0.0:' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('NOVA Assistant IA (Développé par Med Rayen Bouazizi, CEO of MK) en écoute sur http://0.0.0.0:' + PORT));
