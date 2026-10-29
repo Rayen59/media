@@ -10,9 +10,25 @@ const dns = require('dns');
 // Prioritize IPv4 for instantaneous Google API resolution
 dns.setDefaultResultOrder('ipv4first');
 
+// Load environment variables from /app/.dev.env.json if available
+try {
+  const fs = require('fs');
+  const devEnvPath = fs.existsSync('/app/.dev.env.json')
+    ? '/app/.dev.env.json'
+    : path.join(__dirname, '..', '.dev.env.json');
+  if (fs.existsSync(devEnvPath)) {
+    const devEnv = JSON.parse(fs.readFileSync(devEnvPath, 'utf8'));
+    for (const [k, v] of Object.entries(devEnv)) {
+      if (!process.env[k] || process.env[k] === 'MY_GEMINI_API_KEY' || process.env[k] === '') {
+        process.env[k] = v;
+      }
+    }
+  }
+} catch (e) {}
+
 const E = process.env;
 const SECRET = E.JWT_SECRET || 'nova-gemini-secret-2026';
-const GEMINI_API_KEY = E.GEMINI_API_KEY;
+const getGeminiApiKey = () => process.env.GEMINI_API_KEY || E.GEMINI_API_KEY;
 
 const db = new Database(process.env.DB_PATH || 'mediassist.db');
 db.pragma('journal_mode = WAL');
@@ -289,8 +305,7 @@ Principes fondamentaux :
 5. Intégrité : Si une question médicale, juridique ou financière sensible est posée, fournis une analyse experte des protocoles établis, tout en rappelant avec tact la nécessité d'une validation par un professionnel assermenté.`;
 
 async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTokens) {
-  const apiKey = process.env.GEMINI_API_KEY || E.GEMINI_API_KEY;
-  console.log('[DEBUG] callGeminiGenerate key prefix:', apiKey ? apiKey.slice(0, 10) : 'none', 'model:', modelName);
+  const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -307,7 +322,8 @@ async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTo
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey
+      'x-goog-api-key': apiKey,
+      'User-Agent': 'aistudio-build'
     },
     body: JSON.stringify(payload)
   });
@@ -337,7 +353,7 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
       return r.status(400).json({ error: 'Message ou fichier requis.' });
     }
 
-    if (!GEMINI_API_KEY) {
+    if (!getGeminiApiKey()) {
       return r.status(500).json({ error: 'Configuration serveur : variable GEMINI_API_KEY manquante.' });
     }
 
