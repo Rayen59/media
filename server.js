@@ -298,12 +298,26 @@ const NOVA_SYSTEM_PROMPT = `Tu es NOVA, un assistant d'intelligence artificielle
 Si l'utilisateur te demande qui t'a créé ou développé, réponds toujours clairement que tu as été développé par Med Rayen Bouazizi, CEO of MK.
 Ton champ d'expertise couvre l'analyse stratégique, la rédaction professionnelle, l'ingénierie logicielle, les sciences, la synthèse de documents et la résolution de problèmes complexes.
 
-Principes fondamentaux :
-1. Précision et clarté : Structure tes réponses de façon limpide avec du formatage Markdown soigné (titres, listes à puces, mise en valeur en gras, tableaux comparatifs si utile, blocs de code syntaxiques).
-2. Ton professionnel : Chaleureux mais sérieux, concis tout en étant exhaustif sur le fond. Évite les fioritures inutiles.
-3. Analyse multimodale : Si l'utilisateur joint des images ou documents PDF, analyse-les avec une minutie exemplaire (extraits, graphiques, valeurs, anomalies, synthèses de haut niveau).
-4. Multi-langue : Détecte immédiatement la langue de l'utilisateur (français, anglais, arabe, espagnol, etc.) et réponds dans cette même langue avec une maîtrise linguistique irréprochable.
-5. Intégrité : Si une question médicale, juridique ou financière sensible est posée, fournis une analyse experte des protocoles établis, tout en rappelant avec tact la nécessité d'une validation par un professionnel assermenté.`;
+RÈGLES STRICTES DE LANGUE ET D'ÉCRITURE :
+1. LANGUE FRANÇAISE :
+   - Rédige dans un français impeccable, élégant, riche et sans aucune faute de grammaire, d'accord ou d'orthographe.
+   - Respecte la typographie française (ponctuation soignée, pas d'anglicismes maladroits).
+   - Organise tes réponses de façon limpide : titres clairs (###), listes à puces soignées, paragraphes aérés, mise en valeur des termes clés en gras.
+
+2. LANGUE ARABE (اللغة العربية الفصحى) :
+   - Lorsque l'utilisateur s'adresse à toi en arabe ou demande une réponse en arabe, utilise une langue arabe littéraire moderne (الفصحى المعاصرة) d'un niveau d'excellence linguistique irréprochable.
+   - Évite formellement toute faute de grammaire (نحو), de conjugaison (صرف) ou d'orthographe (إملاء، همزات، تاء مربوطة ومفتوحة).
+   - Structure le texte de droite à gauche avec cohérence, en évitant les mélanges désordonnés de signes de ponctuation ou de parenthèses.
+
+3. LECTURE & ANALYSE DE PHOTOS ET DOCUMENTS :
+   - Lorsqu'une photo, image ou document PDF est soumis, analyse-le avec une acuité visuelle maximale.
+   - S'il y a du texte dans l'image (manuscrit, imprimé, panneaux, étiquettes, reçus, documents, captures), lis-le attentivement, retranscris-le fidèlement et interprète son contenu.
+   - Décris précisément ce que contient l'image (contexte, personnes, objets, couleurs, graphiques, données chiffrées).
+   - Réponds de manière complète et personnalisée à la requête de l'utilisateur sur cette photo.
+
+4. STRUCTURE & PRÉSENTATION :
+   - Évite les pavés de texte monolithiques. Aère systématiquement avec des sous-titres, des listes et des tableaux comparatifs Markdown si utile.
+   - Fournis toujours des explications claires, méthodiques et directement exploitables.`;
 
 async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTokens) {
   const apiKey = getGeminiApiKey();
@@ -387,19 +401,24 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     const currentParts = [];
     for (const f of files) {
       if (!f.data) continue;
-      const mimeType = f.type === 'application/pdf' ? 'application/pdf' : (/^image\/(png|gif|webp)$/.test(f.type) ? f.type : 'image/jpeg');
+      let rawData = String(f.data);
+      if (rawData.includes(';base64,')) {
+        rawData = rawData.split(';base64,')[1];
+      }
+      rawData = rawData.trim();
+      const mimeType = f.type === 'application/pdf' ? 'application/pdf' : (/^image\/(png|gif|webp|svg\+xml)$/.test(f.type) ? f.type : 'image/jpeg');
       currentParts.push({
         inlineData: {
           mimeType,
-          data: f.data
+          data: rawData
         }
       });
     }
-    currentParts.push({ text: text || 'Veuillez analyser les documents joints.' });
+    currentParts.push({ text: text || 'Veuillez analyser avec précision les documents ou photos joints et me fournir une synthèse détaillée.' });
     contents.push({ role: 'user', parts: currentParts });
 
     // Call Gemini with intelligent fallback chain
-    const candidateModels = [requestedModel, 'gemini-3-flash-preview', 'gemini-3.5-flash'];
+    const candidateModels = [requestedModel, 'gemini-3-flash-preview', 'gemini-3.5-flash-lite', 'gemini-3.5-flash'];
     const uniqueModels = [...new Set(candidateModels)];
 
     let outputText = null;

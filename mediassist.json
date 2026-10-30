@@ -9,6 +9,16 @@
       "model": "gemini-3-flash-preview",
       "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
       "created": 1793295530482
+    },
+    {
+      "id": 2,
+      "email": "test_health@example.com",
+      "name": "HealthCheck",
+      "pass": "$2a$10$BhLNJHxSPf8R2dp16U3hwuUoAu7l2uqZvJsCEXjYQpeo9ec0c731y",
+      "verified": 1,
+      "model": "gemini-3-flash-preview",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793358011579
     }
   ],
   "chats": [
@@ -25,6 +35,27 @@
       "title": "Bonjour NOVA, confirme que tout …",
       "created": 1793295530521,
       "updated": 1793295530522
+    },
+    {
+      "id": "chat_1793358011579",
+      "uid": 2,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793358011579,
+      "updated": 1793358011579
+    },
+    {
+      "id": "chat_1793358016664",
+      "uid": 2,
+      "title": "Bonjour, peux-tu te présenter en…",
+      "created": 1793358016664,
+      "updated": 1793358016665
+    },
+    {
+      "id": "chat_1793358432645",
+      "uid": 2,
+      "title": "مرحباً، أرجو أن تقدم نفسك باللغة…",
+      "created": 1793358432645,
+      "updated": 1793358432646
     }
   ],
   "chat_msgs": [
@@ -54,7 +85,52 @@
       "text": "Bonjour ! Je vous confirme que tous mes systèmes sont parfaitement opérationnels.\n\nJe suis **NOVA**, votre assistant d'intelligence artificielle d'élite, développé par **Med Rayen Bouazizi, CEO of MK**. Je suis prêt à vous accompagner avec la rigueur et l'expertise qui me caractérisent.\n\nVoici un aperçu de ce que je peux réaliser pour vous dès maintenant :\n\n*   **Analyse Stratégique & Résolution de Problèmes :** Élaboration de plans d'action et diagnostic de situations complexes.\n*   **Ingénierie Logicielle & Sciences :** Rédaction de code optimisé, débogage et explications scientifiques approfondies.\n*   **Rédaction & Synthèse :** Création de documents professionnels, rapports et résumés de haute précision.\n*   **Analyse de Documents :** Étude minutieuse de vos fichiers PDF et images (données, graphiques, extraits).\n\nComment puis-je vous assister aujourd'hui ?",
       "files": "[]",
       "ts": 1793295530522
+    },
+    {
+      "id": "msg_1793358011579",
+      "chat_id": "chat_1793358011579",
+      "uid": 2,
+      "role": "bot",
+      "text": "Bonjour HealthCheck ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793358011579
+    },
+    {
+      "id": "msg_1793358016664_u",
+      "chat_id": "chat_1793358016664",
+      "uid": 2,
+      "role": "user",
+      "text": "Bonjour, peux-tu te présenter en une phrase ?",
+      "files": "[]",
+      "ts": 1793358016664
+    },
+    {
+      "id": "msg_1793358016665_b",
+      "chat_id": "chat_1793358016664",
+      "uid": 2,
+      "role": "bot",
+      "text": "Je suis **NOVA**, un assistant d'intelligence artificielle d'élite développé par **Med Rayen Bouazizi, CEO of MK**, conçu pour vous accompagner avec rigueur et expertise dans l'analyse stratégique, l'ingénierie et la résolution de problèmes complexes.",
+      "files": "[]",
+      "ts": 1793358016665
+    },
+    {
+      "id": "msg_1793358432645_u",
+      "chat_id": "chat_1793358432645",
+      "uid": 2,
+      "role": "user",
+      "text": "مرحباً، أرجو أن تقدم نفسك باللغة العربية الفصحى في جملتين موجزتين.",
+      "files": "[{\"name\":\"test.png\",\"type\":\"image/png\"}]",
+      "ts": 1793358432645
+    },
+    {
+      "id": "msg_1793358432646_b",
+      "chat_id": "chat_1793358432645",
+      "uid": 2,
+      "role": "bot",
+      "text": "أهلاً بك؛ أنا **NOVA**، مساعد ذكاء اصطناعي من النخبة، متخصص في تقديم الحلول المبتكرة والتحليلات الاستراتيجية الدقيقة بمستوى عالٍ من الاحترافية والتميز.\n\nلقد تم تطويري من قبل السيد **محمد ريان بوعزيزي (Med Rayen Bouazizi)**، الرئيس التنفيذي لشركة **MK**.",
+      "files": "[]",
+      "ts": 1793358432646
     }
   ],
-  "_lastUserId": 1
+  "_lastUserId": 2
 }
