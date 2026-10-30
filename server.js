@@ -319,6 +319,51 @@ RÈGLES STRICTES DE LANGUE ET D'ÉCRITURE :
    - Évite les pavés de texte monolithiques. Aère systématiquement avec des sous-titres, des listes et des tableaux comparatifs Markdown si utile.
    - Fournis toujours des explications claires, méthodiques et directement exploitables.`;
 
+// ===== SERVICES WEB SEARCH & LIEUX MÉDICAUX (POUR SMART WATCH & TÉLÉPHONE) =====
+
+async function searchLiveWeb(query) {
+  try {
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'fr-FR,fr;q=0.9,ar;q=0.8,en;q=0.7'
+      }
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+    const snippets = (html.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g) || [])
+      .map(x => x.replace(/<[^>]+>/g, '').trim())
+      .filter(Boolean);
+    return snippets.slice(0, 4);
+  } catch (e) {
+    return [];
+  }
+}
+
+async function findNearbyPlaces(lat, lon, query = 'hospital') {
+  try {
+    let url;
+    if (lat && lon) {
+      url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&lat=${lat}&lon=${lon}&limit=5`;
+    } else {
+      url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`;
+    }
+    const res = await fetch(url, { headers: { 'User-Agent': 'NOVA-MK-Assistant/2.0' } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).slice(0, 5).map(item => ({
+      name: item.display_name.split(',')[0],
+      address: item.display_name,
+      lat: item.lat,
+      lon: item.lon,
+      mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.display_name)}`
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
 async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTokens) {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
@@ -355,6 +400,49 @@ async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTo
   return text;
 }
 
+// Endpoint de transcription audio (Web Speech fallback pour Smart Watch et Mobile)
+app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
+  try {
+    const audioData = q.body.audio;
+    const mimeType = q.body.mimeType || 'audio/webm';
+    if (!audioData) return r.status(400).json({ error: 'Fichier audio manquant.' });
+
+    let rawData = String(audioData);
+    if (rawData.includes(';base64,')) {
+      rawData = rawData.split(';base64,')[1];
+    }
+    rawData = rawData.trim();
+
+    const apiKey = getGeminiApiKey();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    const payload = {
+      systemInstruction: {
+        parts: [{
+          text: "Tu es un transcripteur vocal expert multilingue (français, arabe, anglais). Retranscris avec une précision irréprochable les propos enregistrés. Ne retourne strictement QUE le texte exact prononcé, sans aucune ponctuation inutile, sans guillemets et sans commentaire."
+        }]
+      },
+      contents: [{
+        parts: [
+          { inlineData: { mimeType, data: rawData } },
+          { text: "Retranscris fidèlement cet audio." }
+        ]
+      }]
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const transcript = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    return r.json({ ok: true, transcript });
+  } catch (e) {
+    console.error('Transcribe error:', e);
+    return r.status(500).json({ error: 'Erreur lors de la transcription vocale.' });
+  }
+});
+
 app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
   try {
     const text = String(q.body.text || '').trim();
@@ -363,6 +451,7 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     const requestedModel = q.body.model || q.u.model || 'gemini-3-flash-preview';
     const temp = typeof q.body.temp === 'number' ? q.body.temp : 0.7;
     const tokens = typeof q.body.tokens === 'number' ? Math.min(q.body.tokens, 8192) : 2048;
+    const userLoc = q.body.location; // { lat, lng, city }
 
     if (!text && !files.length) {
       return r.status(400).json({ error: 'Message ou fichier requis.' });
@@ -381,6 +470,38 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
       const initialTitle = text ? (text.slice(0, 32) + (text.length > 32 ? '…' : '')) : 'Nouvelle conversation';
       db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)')
         .run(currentChatId, q.u.id, initialTitle, now, now);
+    }
+
+    // Détection de recherche internet ou de recherche de lieux médicaux (hôpitaux, urgences, cabinets)
+    const lowerText = text.toLowerCase();
+    const needsMedical = /hopital|hôpital|clinique|cabinet|urgence|médical|médecin|docteur|douleur|blessure|malade|santé|pharmacie|hospital|clinic|doctor|emergency|مستشفى|طبيب|عيادة|طوارئ|صيدلية|ألم|مرض|إسعاف/.test(lowerText);
+    const needsSearch = /recherche|cherche|actualit|nouvelle|météo|qui est|qu'est-ce|combien|prix|dernier|aujourd'hui|c'est quoi|news|weather|search|ابحث|أخبار|ما هو|من هو|طقس|كم/.test(lowerText);
+
+    let enrichedContext = '';
+    let nearbyPlaces = [];
+    let webSources = [];
+
+    // Recherche de lieux de santé géolocalisés
+    if (needsMedical) {
+      const lat = userLoc?.lat;
+      const lon = userLoc?.lng;
+      nearbyPlaces = await findNearbyPlaces(lat, lon, 'hopital urgence clinique');
+      if (nearbyPlaces.length) {
+        enrichedContext += `\n\n[DONNÉES EN TEMPS RÉEL - ÉTABLISSEMENTS DE SANTÉ À PROXIMITÉ (GPS: ${lat || 'Général'}, ${lon || ''})] :\n` +
+          nearbyPlaces.map((p, i) => `${i + 1}. ${p.name} - ${p.address} (Lien GPS: ${p.mapUrl})`).join('\n') +
+          `\nImportant : Si l'utilisateur exprime une détresse ou cherche un secours, indique-lui immédiatement le nom et l'adresse de ces hôpitaux/cabinets les plus proches, conseille d'appeler les urgences locales (15/112 en Europe, 190 en Tunisie, 911 aux USA, etc.) et formule une consigne vocale rassurante et directe.\n`;
+      }
+    }
+
+    // Recherche web en temps réel si demandé ou informatif
+    if (needsSearch && !needsMedical) {
+      const webSnippets = await searchLiveWeb(text);
+      if (webSnippets.length) {
+        webSources = webSnippets;
+        enrichedContext += `\n\n[RÉSULTATS DE RECHERCHE INTERNET EN DIRECT] :\n` +
+          webSnippets.map((s, idx) => `Source ${idx + 1}: ${s}`).join('\n') +
+          `\nIntègre ces données vérifiées d'actualité pour apporter une réponse pointue et à jour.\n`;
+      }
     }
 
     // Load recent conversation history
@@ -414,7 +535,12 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
         }
       });
     }
-    currentParts.push({ text: text || 'Veuillez analyser avec précision les documents ou photos joints et me fournir une synthèse détaillée.' });
+    
+    let fullUserPrompt = text || 'Veuillez analyser avec précision les documents ou photos joints et me fournir une synthèse détaillée.';
+    if (enrichedContext) {
+      fullUserPrompt += '\n\n' + enrichedContext;
+    }
+    currentParts.push({ text: fullUserPrompt });
     contents.push({ role: 'user', parts: currentParts });
 
     // Call Gemini with intelligent fallback chain
@@ -440,6 +566,23 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
       return r.status(502).json({ error: lastError?.message || 'Erreur lors de la génération avec le moteur IA.' });
     }
 
+    // Détection de la langue principale (Arabe, Français, Anglais)
+    const isAr = /[\u0600-\u06FF]/.test(outputText);
+    const isEn = /\b(the|is|and|you|this|hospital|doctor|health)\b/i.test(outputText) && !/\b(le|la|les|est|vous|hôpital)\b/i.test(outputText);
+    const detectedLang = isAr ? 'ar' : (isEn ? 'en' : 'fr');
+
+    // Génération d'un résumé vocal court et percutant spécialement conçu pour l'écran et le haut-parleur de la Smart Watch
+    let speechSummary = '';
+    const cleanOutput = outputText.replace(/```[\s\S]*?```/g, '')
+                                  .replace(/[#*`_>|]/g, '')
+                                  .replace(/https?:\/\/\S+/g, '')
+                                  .trim();
+    const firstSentenceMatch = cleanOutput.match(/^(.*?[.!?](\s|$))/);
+    speechSummary = firstSentenceMatch ? firstSentenceMatch[0].trim() : cleanOutput.slice(0, 180);
+    if (speechSummary.length < 30 && cleanOutput.length > 30) {
+      speechSummary = cleanOutput.slice(0, 180);
+    }
+
     const userMsgId = 'msg_' + now + '_u';
     const botMsgId = 'msg_' + (now + 1) + '_b';
 
@@ -462,6 +605,10 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     return r.json({
       ok: true,
       text: outputText,
+      speechSummary,
+      detectedLang,
+      nearbyPlaces,
+      webSources,
       chatId: currentChatId,
       userMsgId,
       botMsgId,
