@@ -1026,27 +1026,29 @@ button:active{transform:scale(.97)}
   </div>
 </div>
 
-<!-- RADAR BLUETOOTH PANEL -->
+<!-- LIAISON SMART WATCH RÉELLE -->
 <div id="btPanel" class="hide">
   <div class="bt-box">
     <div class="bt-h">
       <button class="ib" id="btClose">✕</button>
-      <h3>Périphériques Bluetooth & Smart Watch</h3>
-      <button class="ib" id="btPairReal" title="Appairer un périphérique Web Bluetooth">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <h3>Liaison Smart Watch Réelle</h3>
+      <button class="ib" id="btPairReal" title="Appairer ma Smart Watch">
+        <svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/></svg>
       </button>
     </div>
-    <div class="bt-tabs">
-      <button class="on" data-cat="all">Tous</button>
-      <button data-cat="wearable">Montres BLE & Band</button>
-      <button data-cat="audio">Audio</button>
-      <button data-cat="health">Santé</button>
-    </div>
-    <button class="bt-scan" id="btScan">Lancer le scan radar BLE</button>
-    <div class="bt-list" id="btList">
-      <div style="text-align:center;padding:30px 10px;color:var(--mut);font-size:13px">
-        Cliquez sur « Lancer le scan radar BLE » pour détecter votre Smart Watch, montre Nordic UART ou bracelet connecté.
+    <div style="padding:22px;text-align:center">
+      <div id="watchModalStatus" style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--cyan)">
+        Liaison directe avec votre montre connectée physique
       </div>
+      <p style="font-size:13px;color:var(--mut);line-height:1.6;margin-bottom:18px">
+        Reliez votre vraie Smart Watch. Dès l'appairage, <b>Bienvenue dans NOVA</b> s'affiche directement sur son écran dans la langue choisie dans vos paramètres. Vous pouvez lui parler vocalement et écouter ses réponses.
+      </p>
+      <button class="btn" id="btScan" style="margin-bottom:12px;width:100%">
+        Rechercher et connecter ma Smart Watch
+      </button>
+      <button class="btn-o" id="btnTestWatchMsg" style="width:100%;padding:10px;font-size:13px">
+        Tester l'affichage et la voix sur la montre
+      </button>
     </div>
   </div>
 </div>
@@ -1728,7 +1730,7 @@ async function startUniversalVoiceRecording(targetInputId = 'inp', onCompleteCal
       const rec = new SpeechRec();
       rec.continuous = false;
       rec.interimResults = true;
-      rec.lang = 'fr-FR';
+      rec.lang = getWatchLangCode();
 
       rec.onresult = e => {
         recognitionWorked = true;
@@ -1746,8 +1748,14 @@ async function startUniversalVoiceRecording(targetInputId = 'inp', onCompleteCal
         isRecordingAudio = false;
         micBtn.classList.remove('rec');
         userStream.getTracks().forEach(t => t.stop());
-        if (recognitionWorked && onCompleteCallback) {
-          onCompleteCallback($('#' + targetInputId).value);
+        const spoken = $('#' + targetInputId) ? $('#' + targetInputId).value.trim() : '';
+        if (spoken) {
+          if (onCompleteCallback) {
+            onCompleteCallback(spoken);
+          } else if (targetInputId === 'inp') {
+            toast('Recherche vocale lancée…', '🚀');
+            sendMessage();
+          }
         }
       };
 
@@ -2197,18 +2205,47 @@ let bleGattServer = null;
 let bleUartCharacteristic = null;
 let bleAlertNotificationChar = null;
 let bleImmediateAlertChar = null;
+let bleWritableCharacteristics = [];
+
+function getWatchLangCode() {
+  const lang = SETTINGS.voiceLang || 'auto';
+  if (lang.startsWith('ar')) return 'ar-SA';
+  if (lang.startsWith('en')) return 'en-US';
+  return 'fr-FR';
+}
+
+function getWatchWelcomeMessage() {
+  const lang = SETTINGS.voiceLang || 'auto';
+  if (lang.startsWith('ar')) {
+    return 'مرحباً بك في NOVA';
+  } else if (lang.startsWith('en')) {
+    return 'Welcome to NOVA';
+  } else {
+    return 'Bienvenue dans NOVA';
+  }
+}
 
 async function pairSmartWatchBle() {
   unlockAudioMobile();
+
+  // Déblocage des notifications système pour le miroir écran de la montre
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    try { await Notification.requestPermission(); } catch(e){}
+  }
+
   if (!navigator.bluetooth) {
-    toast('Web Bluetooth non supporté par ce navigateur. Utilisez Chrome ou Android BLE.', '⚠️');
+    toast('Web Bluetooth non supporté dans ce navigateur. Utilisez Chrome sur Android ou PC avec Bluetooth actif.', '⚠️');
+    // On notifie la montre via notification système si connectée au téléphone
+    const welcome = getWatchWelcomeMessage();
+    sendTextToRealSmartWatch(welcome, true);
+    speakTextVoice(welcome, null, getWatchLangCode());
     return;
   }
 
   try {
     toast('Recherche de votre Smart Watch en cours…', '📡');
-    
-    // Détection universelle de tout bracelet et montre connectée
+
+    // Détection universelle de toute montre ou bracelet connecté
     const device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [
@@ -2218,11 +2255,14 @@ async function pairSmartWatchBle() {
         'heart_rate',
         'device_information',
         'current_time',
+        'generic_access',
         '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART Service
         '00001811-0000-1000-8000-00805f9b34fb', // Alert Notification Standard
         '00001802-0000-1000-8000-00805f9b34fb', // Immediate Alert
-        '0000fee0-0000-1000-8000-00805f9b34fb', // Xiaomi Mi Band / Huami
-        '0000fee1-0000-1000-8000-00805f9b34fb'
+        '0000fee0-0000-1000-8000-00805f9b34fb', // Xiaomi / Huami / Amazfit
+        '0000fee1-0000-1000-8000-00805f9b34fb',
+        '0000ffe0-0000-1000-8000-00805f9b34fb', // Common BLE Serial UART
+        '0000fff0-0000-1000-8000-00805f9b34fb'
       ]
     });
 
@@ -2230,44 +2270,59 @@ async function pairSmartWatchBle() {
 
     toast(`Connexion à l'écran de ${device.name || 'Smart Watch'}…`, '⏳');
     bleConnectedDevice = device;
+    bleWritableCharacteristics = [];
     const server = await device.gatt.connect();
     bleGattServer = server;
 
-    // Découverte des services pour affichage direct sur l'écran
+    // Découverte dynamique de tous les services et caractéristiques de la montre
     try {
-      const uart = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-      bleUartCharacteristic = await uart.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
-    } catch(e){}
-
-    try {
-      const ans = await server.getPrimaryService('alert_notification');
-      bleAlertNotificationChar = await ans.getCharacteristic('00002a46-0000-1000-8000-00805f9b34fb');
-    } catch(e){}
-
-    try {
-      const ias = await server.getPrimaryService('immediate_alert');
-      bleImmediateAlertChar = await ias.getCharacteristic('alert_level');
-    } catch(e){}
-
-    // Batterie montre connectée
-    try {
-      const batService = await server.getPrimaryService('battery_service');
-      const batChar = await batService.getCharacteristic('battery_level');
-      const val = await batChar.readValue();
-      const pct = val.getUint8(0);
-      toast(`Batterie Smart Watch : ${pct}%`, '🔋');
-    } catch(e){}
-
-    // Cardiofréquencemètre de la montre
-    try {
-      const hrService = await server.getPrimaryService('heart_rate');
-      const hrChar = await hrService.getCharacteristic('heart_rate_measurement');
-      await hrChar.startNotifications();
-      hrChar.addEventListener('characteristicvaluechanged', (ev) => {
-        const bpm = ev.target.value.getUint8(1);
-        toast(`Pouls Smart Watch : ${bpm} BPM`, '❤️');
-      });
-    } catch(e){}
+      const services = await server.getPrimaryServices();
+      for (const service of services) {
+        try {
+          const chars = await service.getCharacteristics();
+          for (const ch of chars) {
+            const uuid = String(ch.uuid || '').toLowerCase();
+            if (ch.properties.write || ch.properties.writeWithoutResponse) {
+              bleWritableCharacteristics.push(ch);
+            }
+            if (uuid.includes('6e400002') || uuid.includes('ffe1') || uuid.includes('fff2')) {
+              bleUartCharacteristic = ch;
+            }
+            if (uuid.includes('2a46')) {
+              bleAlertNotificationChar = ch;
+            }
+            if (uuid.includes('2a06')) {
+              bleImmediateAlertChar = ch;
+            }
+            // Si la montre envoie des notifications (bouton montre ou données vocales)
+            if (ch.properties.notify && (uuid.includes('6e400003') || uuid.includes('ffe1'))) {
+              try {
+                await ch.startNotifications();
+                ch.addEventListener('characteristicvaluechanged', () => {
+                  if (!isRecordingAudio) {
+                    startUniversalVoiceRecording('inp');
+                  }
+                });
+              } catch(e){}
+            }
+          }
+        } catch(e){}
+      }
+    } catch(e) {
+      // Fallback par services individuels
+      try {
+        const uart = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+        bleUartCharacteristic = await uart.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+      } catch(e){}
+      try {
+        const ans = await server.getPrimaryService('alert_notification');
+        bleAlertNotificationChar = await ans.getCharacteristic('00002a46-0000-1000-8000-00805f9b34fb');
+      } catch(e){}
+      try {
+        const ias = await server.getPrimaryService('immediate_alert');
+        bleImmediateAlertChar = await ias.getCharacteristic('alert_level');
+      } catch(e){}
+    }
 
     // Écoute de déconnexion
     device.addEventListener('gattserverdisconnected', () => {
@@ -2276,18 +2331,23 @@ async function pairSmartWatchBle() {
       bleUartCharacteristic = null;
       bleAlertNotificationChar = null;
       bleImmediateAlertChar = null;
+      bleWritableCharacteristics = [];
       updateBleStatusUI(false);
       toast('Smart Watch déconnectée');
     });
 
     updateBleStatusUI(true, device.name);
-    toast(`Smart Watch ${device.name || 'connectée'} ! Les réponses s'afficheront sur son écran.`, '✓');
+    toast(`Smart Watch ${device.name || 'connectée'} avec succès !`, '⌚');
 
-    // Message inaugural envoyé sur l'écran de la vraie montre
-    await sendTextToRealSmartWatch('NOVA MK: Connecté avec succès', false);
+    // AFFICHAGE IMMÉDIAT DU MESSAGE DE BIENVENUE SUR L'ÉCRAN DE LA MONTRE SELON LA LANGUE CHOISIE
+    const welcome = getWatchWelcomeMessage();
+    await sendTextToRealSmartWatch(welcome, true);
+
+    // Annonce vocale immédiate dans le haut-parleur de la montre / téléphone
+    speakTextVoice(welcome, null, getWatchLangCode());
 
   } catch (err) {
-    console.warn('BLE error:', err);
+    console.warn('BLE pairing error:', err);
     toast('Connexion annulée ou aucun appareil sélectionné');
   }
 }
@@ -2298,11 +2358,11 @@ function updateBleStatusUI(isConnected, name = '') {
     if (isConnected) {
       btBtn.style.color = 'var(--cyan)';
       btBtn.style.borderColor = 'var(--cyan)';
-      btBtn.title = `Smart Watch connectée (${name}) · Affichage sur écran actif`;
+      btBtn.title = `Smart Watch connectée (${name}) · Écran actif`;
     } else {
       btBtn.style.color = '';
       btBtn.style.borderColor = '';
-      btBtn.title = 'Scanner Bluetooth & Smart Watch';
+      btBtn.title = 'Lier ma Smart Watch';
     }
   }
   const badge = $('#watchSyncBadge');
@@ -2312,70 +2372,102 @@ function updateBleStatusUI(isConnected, name = '') {
   }
   const desc = $('#watchSyncDesc');
   if (desc) {
-    desc.textContent = isConnected ? 'Liaison écran Bluetooth active' : 'En attente de connexion';
+    desc.textContent = isConnected ? 'Liaison écran et voix active' : 'En attente de connexion';
+  }
+  const modalStatus = $('#watchModalStatus');
+  if (modalStatus) {
+    modalStatus.textContent = isConnected ? `● Smart Watch connectée : ${name || 'Montre'}` : 'En attente de connexion';
+    modalStatus.style.color = isConnected ? 'var(--cyan)' : 'var(--mut)';
   }
 }
 
 // Fonction centrale : Envoi direct du texte sur l'ÉCRAN RÉEL de la montre physique
 async function sendTextToRealSmartWatch(text, notifyUser = false) {
-  if (!bleGattServer || !bleConnectedDevice) {
-    if (notifyUser) {
-      toast('Aucune Smart Watch connectée. Cliquez sur l’icône Bluetooth pour appairer votre montre.', '⌚');
-    }
-    return;
+  const clean = text.replace(/```[\s\S]*?```/g, '')
+                    .replace(/[#*`_>|]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+  if (!clean) return;
+
+  let sent = false;
+
+  // 1. Notification Système Bluetooth Téléphone -> Écran de TOUTE montre réelle (WearOS, Apple Watch, Samsung Galaxy Watch, Amazfit, Xiaomi, Huawei, Garmin)
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('NOVA', {
+        body: clean.slice(0, 180),
+        vibrate: [200, 100, 200],
+        tag: 'nova-watch-display',
+        renotify: true
+      });
+      sent = true;
+    } catch(e){}
   }
-  try {
-    // 1. Réveil de l'écran et vibration de la montre via Alert Level (si supporté)
-    if (bleImmediateAlertChar) {
-      try {
-        await bleImmediateAlertChar.writeValue(new Uint8Array([1]));
-      } catch(e){}
+
+  // 2. Écriture directe sur les caractéristiques GATT BLE de la montre
+  if (bleGattServer && bleGattServer.connected) {
+    try {
+      // Réveil de l'écran et vibration via Immediate Alert
+      if (bleImmediateAlertChar) {
+        try { await bleImmediateAlertChar.writeValue(new Uint8Array([1])); } catch(e){}
+      }
+
+      const encoder = new TextEncoder();
+
+      // Alert Notification Service (0x2A46 New Alert)
+      if (bleAlertNotificationChar) {
+        try {
+          const textBytes = encoder.encode(clean.slice(0, 140));
+          const packet = new Uint8Array(2 + textBytes.length);
+          packet[0] = 9; // Catégorie : Instant Message
+          packet[1] = 1; // 1 nouvelle alerte
+          packet.set(textBytes, 2);
+          await bleAlertNotificationChar.writeValue(packet);
+          sent = true;
+        } catch(e){}
+      }
+
+      // Nordic UART Service / Serial BLE
+      if (bleUartCharacteristic) {
+        try {
+          const fullBytes = encoder.encode(clean.slice(0, 220) + '\n');
+          for (let offset = 0; offset < fullBytes.length; offset += 20) {
+            const chunk = fullBytes.subarray(offset, Math.min(offset + 20, fullBytes.length));
+            await bleUartCharacteristic.writeValue(chunk);
+            await new Promise(r => setTimeout(r, 20));
+          }
+          sent = true;
+        } catch(e){}
+      }
+
+      // Fallback sur caractéristique inscriptible
+      if (!sent && bleWritableCharacteristics.length > 0) {
+        try {
+          const bytes = encoder.encode(clean.slice(0, 40));
+          await bleWritableCharacteristics[0].writeValue(bytes);
+          sent = true;
+        } catch(e){}
+      }
+    } catch (err) {
+      console.warn('Erreur transmission écran montre:', err);
     }
+  }
 
-    // Nettoyage du texte pour affichage lisible sur écran de montre
-    const clean = text.replace(/```[\s\S]*?```/g, '')
-                      .replace(/[#*`_>|]/g, '')
-                      .replace(/\s+/g, ' ')
-                      .trim();
-    if (!clean) return;
-
-    const encoder = new TextEncoder();
-
-    // 2. Envoi via Standard Alert Notification (ANS New Alert 0x2A46)
-    if (bleAlertNotificationChar) {
-      try {
-        const textBytes = encoder.encode(clean.slice(0, 160));
-        const packet = new Uint8Array(2 + textBytes.length);
-        packet[0] = 9; // Category: Instant Message
-        packet[1] = 1; // Number of new alerts
-        packet.set(textBytes, 2);
-        await bleAlertNotificationChar.writeValue(packet);
-      } catch(e){}
-    }
-
-    // 3. Envoi via Nordic UART Service
-    if (bleUartCharacteristic) {
-      try {
-        const fullBytes = encoder.encode(clean.slice(0, 240) + '\n');
-        for (let offset = 0; offset < fullBytes.length; offset += 20) {
-          const chunk = fullBytes.subarray(offset, Math.min(offset + 20, fullBytes.length));
-          await bleUartCharacteristic.writeValue(chunk);
-          await new Promise(r => setTimeout(r, 25));
-        }
-      } catch(e){}
-    }
-
-    if (notifyUser) {
-      toast(`Affiché sur l'écran de votre Smart Watch (${bleConnectedDevice.name || 'Montre'})`, '⌚');
-    }
-  } catch (err) {
-    console.warn('Erreur transmission écran montre:', err);
+  if (notifyUser && sent) {
+    toast(`Affiché sur l'écran de votre Smart Watch`, '⌚');
   }
 }
 
+// Clics et gestion directe sans schéma ni distraction
 on('#btBtn', 'click', () => {
-  const p = $('#btPanel');
-  if (p) p.classList.remove('hide');
+  if (bleConnectedDevice && bleGattServer && bleGattServer.connected) {
+    const welcome = getWatchWelcomeMessage();
+    sendTextToRealSmartWatch(welcome, true);
+    speakTextVoice(welcome, null, getWatchLangCode());
+    toast(`Smart Watch connectée (${bleConnectedDevice.name || 'Montre'}). Message d'accueil renvoyé.`, '⌚');
+  } else {
+    pairSmartWatchBle();
+  }
 });
 on('#btClose', 'click', () => {
   const p = $('#btPanel');
@@ -2383,46 +2475,13 @@ on('#btClose', 'click', () => {
 });
 on('#btPairReal', 'click', pairSmartWatchBle);
 on('#btnPairWatchDirect', 'click', pairSmartWatchBle);
-
-// Radar scan BLE simulé + réel
-let btDevices = [
-  { id: 'smart_01', name: 'Smart Band / Montre BLE', type: 'wearable', rssi: -42, desc: 'Compatible Nordic UART · Notifications & Voix' },
-  { id: 'buds_01', name: 'Écouteurs NOVA Spatial Pro', type: 'audio', rssi: -50, desc: 'Audio HD · Bluetooth 5.3' },
-  { id: 'health_01', name: 'Moniteur Santé & Pouls', type: 'health', rssi: -65, desc: 'Cardiofréquencemètre BLE' }
-];
-
-on('#btScan', 'click', () => {
-  const btn = $('#btScan');
-  if (!btn) return;
-  btn.textContent = 'Scan en cours…';
-  btn.disabled = true;
-  setTimeout(() => {
-    btn.textContent = 'Actualiser le radar';
-    btn.disabled = false;
-    renderBluetoothList();
-    toast('Smart Watch détectée à proximité !', '📡');
-  }, 800);
+on('#btScan', 'click', pairSmartWatchBle);
+on('#btnTestWatchMsg', 'click', () => {
+  const welcome = getWatchWelcomeMessage();
+  sendTextToRealSmartWatch(welcome, true);
+  speakTextVoice(welcome, null, getWatchLangCode());
+  toast('Test d’affichage et annonce vocale envoyés à la montre', '⌚');
 });
-
-function renderBluetoothList() {
-  const list = $('#btList');
-  if (!list) return;
-  list.innerHTML = '';
-  btDevices.forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'dev';
-    const ic = d.type === 'audio' ? '🔊' : d.type === 'wearable' ? '⌚' : '🩺';
-    el.innerHTML = `
-      <div class="ic">${ic}</div>
-      <div class="info">
-        <b>${escapeHtml(d.name)}</b>
-        <small>${escapeHtml(d.desc)}</small>
-      </div>
-      <button onclick="pairSmartWatchBle()">Relier</button>
-    `;
-    list.appendChild(el);
-  });
-}
 
 // VUE A4
 on('#a4Btn', 'click', () => {
@@ -2498,7 +2557,12 @@ on('#setWebSearch', 'click', () => {
 on('#setVoiceLang', 'change', e => {
   SETTINGS.voiceLang = e.target.value;
   saveSettingsLocally();
-  toast('Langue vocale configurée');
+  const welcome = getWatchWelcomeMessage();
+  toast('Langue configurée : ' + e.target.options[e.target.selectedIndex].text);
+  if (bleConnectedDevice) {
+    sendTextToRealSmartWatch(welcome, true);
+    speakTextVoice(welcome, null, getWatchLangCode());
+  }
 });
 
 on('#setTemp', 'input', e => {

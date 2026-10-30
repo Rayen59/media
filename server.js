@@ -6,6 +6,7 @@ const cookie = require('cookie-parser');
 const crypto = require('crypto');
 const path = require('path');
 const dns = require('dns');
+const { GoogleGenAI } = require('@google/genai');
 
 // Prioritize IPv4 for instantaneous Google API resolution
 dns.setDefaultResultOrder('ipv4first');
@@ -29,6 +30,18 @@ try {
 const E = process.env;
 const SECRET = E.JWT_SECRET || 'nova-gemini-secret-2026';
 const getGeminiApiKey = () => process.env.GEMINI_API_KEY || E.GEMINI_API_KEY;
+const getAiClient = () => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) return null;
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build'
+      }
+    }
+  });
+};
 
 const db = new Database(process.env.DB_PATH || 'mediassist.db');
 db.pragma('journal_mode = WAL');
@@ -365,35 +378,26 @@ async function findNearbyPlaces(lat, lon, query = 'hospital') {
 }
 
 async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTokens) {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
+  const ai = getAiClient();
+  if (!ai) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-  const payload = {
-    systemInstruction: { parts: [{ text: systemPrompt }] },
-    contents,
-    generationConfig: {
-      temperature: temp !== undefined ? temp : 0.7,
-      maxOutputTokens: maxTokens || 2048
-    }
+  const config = {
+    systemInstruction: systemPrompt
   };
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-      'User-Agent': 'aistudio-build'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error?.message || `Erreur IA HTTP ${res.status}`);
+  if (temp !== undefined && !modelName.startsWith('gemini-3.8') && !modelName.startsWith('gemini-4')) {
+    config.temperature = temp;
+  }
+  if (maxTokens) {
+    config.maxOutputTokens = maxTokens;
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const response = await ai.models.generateContent({
+    model: modelName,
+    contents,
+    config
+  });
+
+  const text = response.text;
   if (!text) {
     throw new Error('Réponse vide du modèle IA.');
   }
@@ -413,29 +417,28 @@ app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
     }
     rawData = rawData.trim();
 
-    const apiKey = getGeminiApiKey();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-    const payload = {
-      systemInstruction: {
-        parts: [{
-          text: "Tu es un transcripteur vocal expert multilingue (français, arabe, anglais). Retranscris avec une précision irréprochable les propos enregistrés. Ne retourne strictement QUE le texte exact prononcé, sans aucune ponctuation inutile, sans guillemets et sans commentaire."
-        }]
-      },
-      contents: [{
-        parts: [
-          { inlineData: { mimeType, data: rawData } },
-          { text: "Retranscris fidèlement cet audio." }
-        ]
-      }]
-    };
+    const ai = getAiClient();
+    if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant sur le serveur.' });
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    const transcript = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    let transcript = '';
+    const transcribeModels = ['gemini-3.5-transcribe', 'gemini-flash-latest'];
+    for (const m of transcribeModels) {
+      try {
+        const resp = await ai.models.generateContent({
+          model: m,
+          contents: [{
+            parts: [
+              { inlineData: { mimeType, data: rawData } },
+              { text: "Tu es un transcripteur vocal expert multilingue (français, arabe, anglais). Retranscris avec une précision irréprochable les propos enregistrés. Ne retourne strictement QUE le texte exact prononcé, sans aucune ponctuation inutile, sans guillemets et sans commentaire." }
+            ]
+          }]
+        });
+        transcript = resp.text?.trim() || '';
+        if (transcript) break;
+      } catch (err) {
+        console.warn(`Transcribe model ${m} failed:`, err.message);
+      }
+    }
     return r.json({ ok: true, transcript });
   } catch (e) {
     console.error('Transcribe error:', e);
@@ -544,12 +547,18 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     contents.push({ role: 'user', parts: currentParts });
 
     // Call Gemini with intelligent fallback chain
-    const candidateModels = [requestedModel, 'gemini-3-flash-preview', 'gemini-3.5-flash-lite', 'gemini-3.5-flash'];
+    const normalizeModel = (m) => {
+      if (!m || m.includes('1.5') || m.includes('2.0') || m.includes('2.5') || m.includes('3-flash-preview') || m.includes('3.5-flash')) {
+        return 'gemini-flash-latest';
+      }
+      return m;
+    };
+    const candidateModels = [normalizeModel(requestedModel), 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
     const uniqueModels = [...new Set(candidateModels)];
 
     let outputText = null;
     let lastError = null;
-    let effectiveModel = requestedModel;
+    let effectiveModel = uniqueModels[0];
 
     for (const modelCandidate of uniqueModels) {
       try {
