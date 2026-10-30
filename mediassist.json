@@ -19,6 +19,26 @@
       "model": "gemini-3-flash-preview",
       "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
       "created": 1793358011579
+    },
+    {
+      "id": 3,
+      "email": "test_1793379453568@example.com",
+      "name": "Tester",
+      "pass": "$2a$10$hyZ9HdvR0WT2ZF68Z.gUmOj.VLbC0NG48JYatu2zjHdv/1U/TGLhq",
+      "verified": 1,
+      "model": "gemini-3-flash-preview",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793379453682
+    },
+    {
+      "id": 4,
+      "email": "t_1793379795362@example.com",
+      "name": "Tester",
+      "pass": "$2a$10$8cXUbs0OUKkzmJKYyYokxOqRtNoFtQUc7mq.vowRwQHMtAc.twoR.",
+      "verified": 1,
+      "model": "gemini-3-flash-preview",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793379795635
     }
   ],
   "chats": [
@@ -70,6 +90,34 @@
       "title": "أين أقرب مستشفى أو قسم طوارئ لمس…",
       "created": 1793361339751,
       "updated": 1793361339752
+    },
+    {
+      "id": "chat_1793379453682",
+      "uid": 3,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793379453682,
+      "updated": 1793379453682
+    },
+    {
+      "id": "chat_1793379453696",
+      "uid": 3,
+      "title": "Bonjour",
+      "created": 1793379453696,
+      "updated": 1793379453696
+    },
+    {
+      "id": "chat_1793379795635",
+      "uid": 4,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793379795635,
+      "updated": 1793379795635
+    },
+    {
+      "id": "chat_1793379795660",
+      "uid": 4,
+      "title": "Bonjour",
+      "created": 1793379795660,
+      "updated": 1793379795661
     }
   ],
   "chat_msgs": [
@@ -180,7 +228,43 @@
       "text": "أنا **NOVA**، مساعدك الذكي، وسأزودك فوراً بالمعلومات اللازمة لمساعدتك في هذه الحالة الطارئة.\n\n### 🚨 أرقام الطوارئ للاتصال الفوري:\nإذا كنت في حالة خطر شديد، يرجى الاتصال بأرقام الطوارئ المحلية فوراً:\n*   **في كندا (موقع المستشفى المذكور):** اتصل بالرقم **911**.\n*   **في تونس (حسب إحداثيات GPS):** اتصل بالإسعاف الطبي (SAMU) على الرقم **190**.\n\n---\n\n### 🏥 أقرب قسم طوارئ متاح حالياً:\n\nبناءً على البيانات المتوفرة، إليك تفاصيل أقرب منشأة طبية:\n\n*   **الاسم:** قسم الطوارئ - مستشفى آنا لابرجي (Urgence - Hôpital Anna-Laberge).\n*   **العنوان:** Boulevard René-Lévesque, Châteauguay, Roussillon, Montérégie, Québec, J6K 4W9, Canada.\n*   **رابط الموقع على الخريطة:** [اضغط هنا للتوجه عبر خرائط Google](https://www.google.com/maps/search/?api=1&query=Urgence%20-%20H%C3%B4pital%20Anna-Laberge%2C%20Boulevard%20Ren%C3%A9-L%C3%A9vesque%2C%20Ch%C3%A2teauguay%2C%20Roussillon%2C%20Mont%C3%A9r%C3%A9gie%2C%20Qu%C3%A9bec%2C%20J6K%204W9%2C%20Canada)\n\n---\n\n### 💡 توجيهات هامة لسلامتك:\n1.  **ابقَ هادئاً:** حاول التنفس بعمق وببطء للسيطرة على القلق.\n2.  **اطلب المساعدة:** إذا كان هناك شخص بالقرب منك، أخبره فوراً أنك بحاجة إلى مساعدة طبية.\n3.  **لا تقُد بنفسك:** إذا كنت تشعر بدوار أو ألم شديد، يفضل انتظار سيارة الإسعاف أو طلب من شخص آخر إيصالك.\n4.  **جهز هويتك:** حاول تجهيز بطاقة الهوية أو التأمين الصحي إن أمكن أثناء توجهك للمستشفى.\n\n**أنا هنا معك، ابقَ على اتصال إذا احتجت لأي مساعدة أخرى. سلامتك هي الأولوية القصوى.**\n\n***\n*تم تقديم هذه المساعدة بواسطة NOVA، المطوّر من قبل Med Rayen Bouazizi، المدير التنفيذي لشركة MK.*",
       "files": "[]",
       "ts": 1793361339752
+    },
+    {
+      "id": "msg_1793379453682",
+      "chat_id": "chat_1793379453682",
+      "uid": 3,
+      "role": "bot",
+      "text": "Bonjour Tester ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793379453682
+    },
+    {
+      "id": "msg_1793379795635",
+      "chat_id": "chat_1793379795635",
+      "uid": 4,
+      "role": "bot",
+      "text": "Bonjour Tester ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793379795635
+    },
+    {
+      "id": "msg_1793379795660_u",
+      "chat_id": "chat_1793379795660",
+      "uid": 4,
+      "role": "user",
+      "text": "Bonjour",
+      "files": "[]",
+      "ts": 1793379795660
+    },
+    {
+      "id": "msg_1793379795661_b",
+      "chat_id": "chat_1793379795660",
+      "uid": 4,
+      "role": "bot",
+      "text": "Bonjour. Je suis **NOVA**, votre assistant d'intelligence artificielle d'élite. Je suis ravi de faire votre connaissance.\n\nPour rappel, j'ai été développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis à votre entière disposition pour vous accompagner dans vos projets, qu'il s'agisse d'analyse stratégique, de rédaction professionnelle, de développement logiciel, de résolution de problèmes complexes ou de toute autre tâche nécessitant rigueur et expertise.\n\nComment puis-je vous être utile aujourd'hui ?",
+      "files": "[]",
+      "ts": 1793379795661
     }
   ],
-  "_lastUserId": 2
+  "_lastUserId": 4
 }

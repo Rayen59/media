@@ -338,6 +338,7 @@ async function searchLiveWeb(query) {
   try {
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
     const res = await fetch(url, {
+      signal: AbortSignal.timeout(3500),
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'fr-FR,fr;q=0.9,ar;q=0.8,en;q=0.7'
@@ -362,7 +363,7 @@ async function findNearbyPlaces(lat, lon, query = 'hospital') {
     } else {
       url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`;
     }
-    const res = await fetch(url, { headers: { 'User-Agent': 'NOVA-MK-Assistant/2.0' } });
+    const res = await fetch(url, { signal: AbortSignal.timeout(3500), headers: { 'User-Agent': 'NOVA-MK-Assistant/2.0' } });
     if (!res.ok) return [];
     const data = await res.json();
     return (Array.isArray(data) ? data : []).slice(0, 5).map(item => ({
@@ -391,11 +392,17 @@ async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTo
     config.maxOutputTokens = maxTokens;
   }
 
-  const response = await ai.models.generateContent({
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Délai dépassé (timeout) pour le modèle ${modelName}`)), 18000)
+  );
+
+  const genPromise = ai.models.generateContent({
     model: modelName,
     contents,
     config
   });
+
+  const response = await Promise.race([genPromise, timeoutPromise]);
 
   const text = response.text;
   if (!text) {

@@ -1644,11 +1644,13 @@ function speakTextVoice(text, msgId, explicitLang) {
   }
 
   stopSpeaking();
+  if (text == null) return;
 
-  const cleanText = text.replace(/```[\s\S]*?```/g, '')
-                        .replace(/[#*`_>|]/g, '')
-                        .replace(/https?:\/\/\S+/g, '')
-                        .trim();
+  const str = typeof text === 'string' ? text : String(text);
+  const cleanText = str.replace(/```[\s\S]*?```/g, '')
+                       .replace(/[#*`_>|]/g, '')
+                       .replace(/https?:\/\/\S+/g, '')
+                       .trim();
   if (!cleanText) return;
 
   const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -2160,15 +2162,17 @@ async function sendMessage(customText = null) {
 
     renderMessages();
 
-    lastSpeechSummary = res.speechSummary || res.text;
-    lastSpeechLang = res.detectedLang || 'fr';
+    lastSpeechSummary = res?.speechSummary || res?.text || '';
+    lastSpeechLang = res?.detectedLang || 'fr';
 
     // Affichage direct sur l'écran physique de la vraie Smart Watch connectée par Bluetooth
-    sendTextToRealSmartWatch(lastSpeechSummary, true);
+    if (lastSpeechSummary) {
+      sendTextToRealSmartWatch(lastSpeechSummary, true);
+    }
 
     // Prononciation vocale automatique (sur téléphone et audio montre / écouteurs)
-    if (SETTINGS.autoVoice) {
-      speakTextVoice(lastSpeechSummary, botMsg.id, res.detectedLang);
+    if (SETTINGS.autoVoice && lastSpeechSummary) {
+      speakTextVoice(lastSpeechSummary, botMsg.id, res?.detectedLang);
     }
   } catch (err) {
     botWrap.remove();
@@ -2383,10 +2387,12 @@ function updateBleStatusUI(isConnected, name = '') {
 
 // Fonction centrale : Envoi direct du texte sur l'ÉCRAN RÉEL de la montre physique
 async function sendTextToRealSmartWatch(text, notifyUser = false) {
-  const clean = text.replace(/```[\s\S]*?```/g, '')
-                    .replace(/[#*`_>|]/g, '')
-                    .replace(/\s+/g, ' ')
-                    .trim();
+  if (text == null) return;
+  const str = typeof text === 'string' ? text : String(text);
+  const clean = str.replace(/```[\s\S]*?```/g, '')
+                   .replace(/[#*`_>|]/g, '')
+                   .replace(/\s+/g, ' ')
+                   .trim();
   if (!clean) return;
 
   let sent = false;
