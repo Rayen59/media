@@ -123,7 +123,7 @@ class SimpleDB {
             name: String(name || cleanEmail.split('@')[0]),
             pass: String(pass),
             verified: 1,
-            model: String(model || 'gemini-3-flash-preview'),
+            model: String(model || 'gemini-2.5-flash'),
             settings: String(settings || '{}'),
             created: Number(created || Date.now())
           });

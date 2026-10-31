@@ -39,6 +39,56 @@
       "model": "gemini-3-flash-preview",
       "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
       "created": 1793379795635
+    },
+    {
+      "id": 5,
+      "email": "rayenbouazizi337@gmail.com",
+      "name": "rayen bouazizi",
+      "pass": "$2a$10$O/qUlzpGtuhQFGKfpCPev.6jQomfHvzumvkcSFIDdPUCbEYGx4.Y6",
+      "verified": 1,
+      "model": "gemini-3-flash-preview",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-3-flash-preview\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793462165632
+    },
+    {
+      "id": 6,
+      "email": "test_verify@nova.ai",
+      "name": "Rayen",
+      "pass": "$2a$10$yM6JNuBTspZdoq0MPiQqWOH9kNy3QqjtdZd1R7nQl877jSGuPnvHS",
+      "verified": 1,
+      "model": "gemini-2.5-flash",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-2.5-flash\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793462221606
+    },
+    {
+      "id": 7,
+      "email": "test_verify_1793463187077@mk.com",
+      "name": "Ingénieur Test MK",
+      "pass": "$2a$10$ZoGK3zA1INB6/BOf6RsZguLrrynC.QEFgp191F/HVhZs1hjdOt/he",
+      "verified": 1,
+      "model": "gemini-2.5-flash",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-2.5-flash\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793463187228
+    },
+    {
+      "id": 8,
+      "email": "verifier_1793463517130@mk.com",
+      "name": "Testeur NOVA MK",
+      "pass": "$2a$10$xWRY24p.Y4lpn61cMILgreWuYkihR6G3O4AnNVb4cBU4.1k0U8vL6",
+      "verified": 1,
+      "model": "gemini-2.5-flash",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-2.5-flash\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793463517307
+    },
+    {
+      "id": 9,
+      "email": "img_verifier_1793463525802@mk.com",
+      "name": "Testeur Image",
+      "pass": "$2a$10$z4m5NVf2f2V13fmE5CI.H.JrsiG762.B/w7XusSfQrwCYf7UrSEQ.",
+      "verified": 1,
+      "model": "gemini-2.5-flash",
+      "settings": "{\"theme\":\"dark\",\"view\":\"chat\",\"anim\":true,\"autoClose\":true,\"typing\":true,\"btAuto\":false,\"speed\":\"normal\",\"compact\":false,\"model\":\"gemini-2.5-flash\",\"temp\":0.7,\"tokens\":2048,\"stream\":false}",
+      "created": 1793463525981
     }
   ],
   "chats": [
@@ -118,6 +168,90 @@
       "title": "Bonjour",
       "created": 1793379795660,
       "updated": 1793379795661
+    },
+    {
+      "id": "chat_1793462165632",
+      "uid": 5,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793462165632,
+      "updated": 1793462751685
+    },
+    {
+      "id": "chat_1793462221606",
+      "uid": 6,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793462221606,
+      "updated": 1793462221606
+    },
+    {
+      "id": "chat_1793462381608",
+      "uid": 6,
+      "title": "Bonjour NOVA, qui es-tu ?",
+      "created": 1793462381608,
+      "updated": 1793462381608
+    },
+    {
+      "id": "chat_1793462488337",
+      "uid": 6,
+      "title": "Bonjour NOVA, es-tu prêt et rapi…",
+      "created": 1793462488337,
+      "updated": 1793462563967
+    },
+    {
+      "id": "chat_1793462500862",
+      "uid": 6,
+      "title": "Image HD : Montre connectée futuris",
+      "created": 1793462500862,
+      "updated": 1793462500862
+    },
+    {
+      "id": "chat_1793463187228",
+      "uid": 7,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793463187228,
+      "updated": 1793463187228
+    },
+    {
+      "id": "chat_1793463187252",
+      "uid": 7,
+      "title": "Bonjour, qui es-tu ?",
+      "created": 1793463187252,
+      "updated": 1793463187253
+    },
+    {
+      "id": "chat_1793463517307",
+      "uid": 8,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793463517307,
+      "updated": 1793463517307
+    },
+    {
+      "id": "chat_1793463517330",
+      "uid": 8,
+      "title": "Bonjour, qui est le créateur de …",
+      "created": 1793463517330,
+      "updated": 1793463517331
+    },
+    {
+      "id": "chat_1793463518129",
+      "uid": 8,
+      "title": "مرحبا، من أنت؟",
+      "created": 1793463518129,
+      "updated": 1793463518130
+    },
+    {
+      "id": "chat_1793463525981",
+      "uid": 9,
+      "title": "Bienvenue sur NOVA",
+      "created": 1793463525981,
+      "updated": 1793463525981
+    },
+    {
+      "id": "chat_1793463532872",
+      "uid": 9,
+      "title": "Image HD : Smartwatch holographique",
+      "created": 1793463532872,
+      "updated": 1793463532872
     }
   ],
   "chat_msgs": [
@@ -264,7 +398,196 @@
       "text": "Bonjour. Je suis **NOVA**, votre assistant d'intelligence artificielle d'élite. Je suis ravi de faire votre connaissance.\n\nPour rappel, j'ai été développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis à votre entière disposition pour vous accompagner dans vos projets, qu'il s'agisse d'analyse stratégique, de rédaction professionnelle, de développement logiciel, de résolution de problèmes complexes ou de toute autre tâche nécessitant rigueur et expertise.\n\nComment puis-je vous être utile aujourd'hui ?",
       "files": "[]",
       "ts": 1793379795661
+    },
+    {
+      "id": "msg_1793462165632",
+      "chat_id": "chat_1793462165632",
+      "uid": 5,
+      "role": "bot",
+      "text": "Bonjour rayen bouazizi ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793462165632
+    },
+    {
+      "id": "msg_1793462168912_u",
+      "chat_id": "chat_1793462165632",
+      "uid": 5,
+      "role": "user",
+      "text": "Hi",
+      "files": "[]",
+      "ts": 1793462168912
+    },
+    {
+      "id": "msg_1793462168913_b",
+      "chat_id": "chat_1793462165632",
+      "uid": 5,
+      "role": "bot",
+      "text": "Bonjour ! Je suis **NOVA**, votre assistant d'intelligence artificielle d'élite. \n\nC'est un plaisir de vous assister. Pour rappel, j'ai été développé par **Med Rayen Bouazizi, CEO of MK**. \n\nMon expertise est à votre entière disposition pour toute tâche complexe, qu'il s'agisse d'analyse stratégique, de rédaction de haute qualité, de résolution de problèmes techniques ou de l'analyse de vos documents et images.\n\n**Comment puis-je vous aider aujourd'hui ?**",
+      "files": "[]",
+      "ts": 1793462168913
+    },
+    {
+      "id": "msg_1793462221606",
+      "chat_id": "chat_1793462221606",
+      "uid": 6,
+      "role": "bot",
+      "text": "Bonjour Rayen ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793462221606
+    },
+    {
+      "id": "msg_1793462488337_u",
+      "chat_id": "chat_1793462488337",
+      "uid": 6,
+      "role": "user",
+      "text": "Bonjour NOVA, es-tu prêt et rapide ?",
+      "files": "[]",
+      "ts": 1793462488337
+    },
+    {
+      "id": "msg_1793462488338_b",
+      "chat_id": "chat_1793462488337",
+      "uid": 6,
+      "role": "bot",
+      "text": "Bonjour ! Je suis **NOVA**, votre assistant d'intelligence artificielle d'élite, développé par **Med Rayen Bouazizi, CEO of MK**. \n\nJe suis parfaitement prêt, pleinement opérationnel et doté d'une réactivité optimale pour vous accompagner dans tous vos projets, qu'il s'agisse d'analyse stratégique, de rédaction professionnelle, d'ingénierie logicielle, de résolution de problèmes complexes ou de traitement de documents et d'images.\n\nComment puis-je vous assister efficacement dès à présent ?",
+      "files": "[]",
+      "ts": 1793462488338
+    },
+    {
+      "id": "msg_1793462500862_img",
+      "chat_id": "chat_1793462500862",
+      "uid": 6,
+      "role": "bot",
+      "text": "Voici votre création visuelle générée en haute définition par NOVA :\n\n**« Montre connectée futuriste cyberpunk avec interface holographique lumineuse »**\n\n![Montre connectée futuriste cyberpunk avec interface holographique lumineuse](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPgogICAgPGRlZnM+CiAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwYTBmMWQiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzE0MWMzMCIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA1MDcwYyIvPgogICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgICA8bGluZWFyR3JhZGllbnQgaWQ9Imdsb3ciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjAlIj4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+CiAgICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiM4YjVjZjYiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwNmI2ZDQiLz4KICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgICAgPHJhZGlhbEdyYWRpZW50IGlkPSJoYWxvIiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzYjgyZjYiIHN0b3Atb3BhY2l0eT0iMC4zNSIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBhMGYxZCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICAgIDxmaWx0ZXIgaWQ9InNoYWRvdyIgeD0iLTIwJSIgeT0iLTIwJSIgd2lkdGg9IjE0MCUiIGhlaWdodD0iMTQwJSI+CiAgICAgICAgPGZlRHJvcFNoYWRvdyBkeD0iMCIgZHk9IjEyIiBzdGREZXZpYXRpb249IjE2IiBmbG9vZC1jb2xvcj0iIzAwMCIgZmxvb2Qtb3BhY2l0eT0iMC42Ii8+CiAgICAgIDwvZmlsdGVyPgogICAgPC9kZWZzPgogICAgPHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMCIgZmlsbD0idXJsKCNiZykiLz4KICAgIDxjaXJjbGUgY3g9IjUwMCIgY3k9IjUwMCIgcj0iNDAwIiBmaWxsPSJ1cmwoI2hhbG8pIi8+CiAgICA8ZyBmaWx0ZXI9InVybCgjc2hhZG93KSI+CiAgICAgIDxyZWN0IHg9IjEwMCIgeT0iMTUwIiB3aWR0aD0iODAwIiBoZWlnaHQ9IjcwMCIgcng9IjMyIiBmaWxsPSIjMGQxNDI0IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMi41IiBmaWxsLW9wYWNpdHk9IjAuODUiLz4KICAgICAgPGNpcmNsZSBjeD0iNTAwIiBjeT0iNDIwIiByPSI4MCIgZmlsbD0idXJsKCNnbG93KSIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgICA8cGF0aCBkPSJNNDY4IDQyMCBMNTMyIDQyMCBNNTAwIDM4OCBMNTAwIDQ1MiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgICA8dGV4dCB4PSI1MDAiIHk9IjYyMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Y4ZmFmYyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TW9udHJlIGNvbm5lY3TDqWUgZnV0dXJpc3RlIGN5YmVycHVuayBhdmVjIGludGVyZmFjZSBob2xvZ3JhcDwvdGV4dD4KICAgICAgPHRleHQgeD0iNTAwIiB5PSI2ODAiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSI1MDAiIGZpbGw9IiM5NGEzYjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5PVkEgTUsgwrcgU3R1ZGlvIEltYWdlIEhhdXRlIFLDqXNvbHV0aW9uIMK3IE1lZCBSYXllbiBCb3Vheml6aTwvdGV4dD4KICAgIDwvZz4KICA8L3N2Zz4=)",
+      "files": "[{\"name\":\"nova_hd_image.png\",\"type\":\"image/png\",\"url\":\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPgogICAgPGRlZnM+CiAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwYTBmMWQiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzE0MWMzMCIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA1MDcwYyIvPgogICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgICA8bGluZWFyR3JhZGllbnQgaWQ9Imdsb3ciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjAlIj4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+CiAgICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiM4YjVjZjYiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwNmI2ZDQiLz4KICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgICAgPHJhZGlhbEdyYWRpZW50IGlkPSJoYWxvIiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzYjgyZjYiIHN0b3Atb3BhY2l0eT0iMC4zNSIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBhMGYxZCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICAgIDxmaWx0ZXIgaWQ9InNoYWRvdyIgeD0iLTIwJSIgeT0iLTIwJSIgd2lkdGg9IjE0MCUiIGhlaWdodD0iMTQwJSI+CiAgICAgICAgPGZlRHJvcFNoYWRvdyBkeD0iMCIgZHk9IjEyIiBzdGREZXZpYXRpb249IjE2IiBmbG9vZC1jb2xvcj0iIzAwMCIgZmxvb2Qtb3BhY2l0eT0iMC42Ii8+CiAgICAgIDwvZmlsdGVyPgogICAgPC9kZWZzPgogICAgPHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMCIgZmlsbD0idXJsKCNiZykiLz4KICAgIDxjaXJjbGUgY3g9IjUwMCIgY3k9IjUwMCIgcj0iNDAwIiBmaWxsPSJ1cmwoI2hhbG8pIi8+CiAgICA8ZyBmaWx0ZXI9InVybCgjc2hhZG93KSI+CiAgICAgIDxyZWN0IHg9IjEwMCIgeT0iMTUwIiB3aWR0aD0iODAwIiBoZWlnaHQ9IjcwMCIgcng9IjMyIiBmaWxsPSIjMGQxNDI0IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMi41IiBmaWxsLW9wYWNpdHk9IjAuODUiLz4KICAgICAgPGNpcmNsZSBjeD0iNTAwIiBjeT0iNDIwIiByPSI4MCIgZmlsbD0idXJsKCNnbG93KSIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgICA8cGF0aCBkPSJNNDY4IDQyMCBMNTMyIDQyMCBNNTAwIDM4OCBMNTAwIDQ1MiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgICA8dGV4dCB4PSI1MDAiIHk9IjYyMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Y4ZmFmYyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TW9udHJlIGNvbm5lY3TDqWUgZnV0dXJpc3RlIGN5YmVycHVuayBhdmVjIGludGVyZmFjZSBob2xvZ3JhcDwvdGV4dD4KICAgICAgPHRleHQgeD0iNTAwIiB5PSI2ODAiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSI1MDAiIGZpbGw9IiM5NGEzYjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5PVkEgTUsgwrcgU3R1ZGlvIEltYWdlIEhhdXRlIFLDqXNvbHV0aW9uIMK3IE1lZCBSYXllbiBCb3Vheml6aTwvdGV4dD4KICAgIDwvZz4KICA8L3N2Zz4=\"}]",
+      "ts": 1793462500862
+    },
+    {
+      "id": "msg_1793462563966_u",
+      "chat_id": "chat_1793462488337",
+      "uid": 6,
+      "role": "user",
+      "text": "Peux-tu me donner 3 conseils pour une santé optimale ?",
+      "files": "[]",
+      "ts": 1793462563966
+    },
+    {
+      "id": "msg_1793462563967_b",
+      "chat_id": "chat_1793462488337",
+      "uid": 6,
+      "role": "bot",
+      "text": "Bonjour. Pour atteindre et maintenir une **santé optimale**, il est essentiel d'adopter une approche globale qui prend en compte le corps et l'esprit. Voici trois conseils fondamentaux, fondés sur des données scientifiques solides :\n\n### 1. Privilégier une nutrition vivante et équilibrée\nL'alimentation est le carburant direct de votre organisme. Pour un fonctionnement cellulaire optimal :\n* **Misez sur la diversité et la couleur :** Consommez quotidiennement des fruits et légumes de saison, riches en antioxydants, vitamines et minéraux essentiels.\n* **Limitez les produits ultra-transformés :** Réduisez drastiquement les sucres ajoutés, les graisses saturées de mauvaise qualité et les additifs industriels qui favorisent l'inflammation chronique.\n* **Maintenez une hydratation constante :** Buvez de l'eau pure tout au long de la journée pour assurer le bon déroulement de tous les processus métaboliques et l'élimination des toxines.\n\n### 2. Intégrer un mouvement régulier et adapté\nLe corps humain est conçu pour bouger. L'inactivité physique est l'un des plus grands risques pour la santé moderne :\n* **Bougez au quotidien :** Visez au moins 30 minutes d'activité physique modérée par jour (marche rapide, vélo, natation).\n* **Associez cardio et renforcement :** Alternez des exercices d'endurance pour le système cardiovasculaire et du renforcement musculaire pour préserver votre masse osseuse et articulaire.\n* **Évitez la sédentarité prolongée :** Prenez l'habitude de vous étirer et de faire quelques pas toutes les heures si vous travaillez en position assise.\n\n### 3. Cultiver un sommeil réparateur et la gestion du stress\nLe repos est la phase durant laquelle le corps et le cerveau se régénèrent. Négliger ce pilier nuit gravement à la santé globale :\n* **Respectez votre rythme circadien :** Visez 7 à 9 heures de sommeil par nuit, en vous couchant et en vous levant à des heures régulières. Évitez les écrans au moins une heure avant le coucher.\n* **Pratiquez la gestion du stress :** Le stress chronique libère du cortisol en excès, ce qui affaiblit le système immunitaire. Intégrez des techniques de relaxation telles que la cohérence cardiaque, la méditation ou la lecture.\n\n---\n\n*Note de service : En tant qu'assistant développé par Med Rayen Bouazizi, CEO of MK, je vous rappelle que ces conseils ont une vocation générale et ne se substituent en aucun cas à un avis médical personnalisé. Si vous éprouvez des symptômes inhabituels ou une urgence médicale, veuillez consulter immédiatement un professionnel de la santé.*",
+      "files": "[]",
+      "ts": 1793462563967
+    },
+    {
+      "id": "msg_1793462751684_u",
+      "chat_id": "chat_1793462165632",
+      "uid": 5,
+      "role": "user",
+      "text": "Genere une image de montage",
+      "files": "[]",
+      "ts": 1793462751684
+    },
+    {
+      "id": "msg_1793462751685_b",
+      "chat_id": "chat_1793462165632",
+      "uid": 5,
+      "role": "bot",
+      "text": "En tant qu'intelligence artificielle textuelle développée par **Med Rayen Bouazizi, CEO of MK**, je ne dispose pas de modules de génération d'images intégrés directement dans cette interface pour créer ou modifier un fichier visuel (JPEG/PNG) de manière instantanée. \n\nCependant, je peux vous guider avec précision vers les meilleures solutions actuelles du marché pour réaliser vos projets de **montage photo** et de **création visuelle assistée par IA**, en m'appuyant sur les standards technologiques les plus récents :\n\n### 1. Génération et Montage par Intelligence Artificielle\nSi vous souhaitez générer des éléments de montage uniques à l'aide de l'IA (composition de décors, fusion de concepts, créations sur mesure) :\n*   **Pixlr AI Generator :** Idéal pour combiner la retouche traditionnelle et la génération d'images par IA directement dans votre navigateur, sans installation complexe.\n*   **Adobe Firefly / Photoshop (Générateur de remplissage) :** La référence professionnelle pour étendre des images, insérer ou supprimer des éléments de manière réaliste grâce à l'intelligence artificielle générative.\n*   **Midjourney ou DALL-E 3 :** Parfaits pour concevoir des fonds visuels originaux, des textures ou des paysages fantastiques que vous pourrez ensuite intégrer dans votre montage.\n\n### 2. Plateformes de Montage en Ligne (Gratuites et Intuitives)\nPour assembler plusieurs photos, créer des histoires visuelles, des bannières pour les réseaux sociaux ou des cartes personnalisées :\n*   **Fotor :** Une excellente option en ligne proposant de nombreux modèles de grilles, d'éléments créatifs et d'outils de collage rapides, sans nécessiter de téléchargement de logiciels lourds.\n*   **Canva :** L'outil incontournable pour le design graphique et le photomontage, offrant une bibliothèque riche de superpositions, de filtres et de templates prêts à l'emploi.\n\n---\n\n### Comment puis-je vous aider davantage ?\nSi vous le souhaitez, je peux concevoir pour vous :\n*   Un **prompt détaillé** (instruction textuelle optimisée) en français ou en anglais pour générer exactement le visuel dont vous avez rêvé sur une IA de génération d'images.\n*   Un **cahier des charges ou un scénario visuel** étape par étape pour structurer votre montage (composition, couleurs, ambiance, placement des éléments). \n\nFaites-moi part de votre vision créative !",
+      "files": "[]",
+      "ts": 1793462751685
+    },
+    {
+      "id": "msg_1793463187228",
+      "chat_id": "chat_1793463187228",
+      "uid": 7,
+      "role": "bot",
+      "text": "Bonjour Ingénieur Test MK ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793463187228
+    },
+    {
+      "id": "msg_1793463187252_u",
+      "chat_id": "chat_1793463187252",
+      "uid": 7,
+      "role": "user",
+      "text": "Bonjour, qui es-tu ?",
+      "files": "[]",
+      "ts": 1793463187252
+    },
+    {
+      "id": "msg_1793463187253_b",
+      "chat_id": "chat_1793463187252",
+      "uid": 7,
+      "role": "bot",
+      "text": "Bonjour ! \n\nJe suis **NOVA**, un assistant d'intelligence artificielle d'élite, hautement qualifié, professionnel, rigoureux et bienveillant, **développé par Med Rayen Bouazizi, CEO of MK**.\n\nMon champ d'expertise couvre un large éventail de domaines exigeants, notamment :\n* L'analyse stratégique et la résolution de problèmes complexes.\n* La rédaction professionnelle et la synthèse de documents.\n* L'ingénierie logicielle et les sciences.\n* L'analyse détaillée de visuels et de documents.\n\nComment puis-je vous assister aujourd'hui avec excellence ?",
+      "files": "[]",
+      "ts": 1793463187253
+    },
+    {
+      "id": "msg_1793463517307",
+      "chat_id": "chat_1793463517307",
+      "uid": 8,
+      "role": "bot",
+      "text": "Bonjour Testeur NOVA MK ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793463517307
+    },
+    {
+      "id": "msg_1793463517330_u",
+      "chat_id": "chat_1793463517330",
+      "uid": 8,
+      "role": "user",
+      "text": "Bonjour, qui est le créateur de NOVA ?",
+      "files": "[]",
+      "ts": 1793463517330
+    },
+    {
+      "id": "msg_1793463517331_b",
+      "chat_id": "chat_1793463517330",
+      "uid": 8,
+      "role": "bot",
+      "text": "Bonjour ! \n\nJe suis **NOVA**, un assistant d'intelligence artificielle d'élite. J'ai été développé par **Med Rayen Bouazizi, CEO of MK**. \n\nComment puis-je vous assister aujourd'hui dans vos projets, vos analyses ou vos recherches ?",
+      "files": "[]",
+      "ts": 1793463517331
+    },
+    {
+      "id": "msg_1793463518129_u",
+      "chat_id": "chat_1793463518129",
+      "uid": 8,
+      "role": "user",
+      "text": "مرحبا، من أنت؟",
+      "files": "[]",
+      "ts": 1793463518129
+    },
+    {
+      "id": "msg_1793463518130_b",
+      "chat_id": "chat_1793463518129",
+      "uid": 8,
+      "role": "bot",
+      "text": "أهلاً بك. أنا **NOVA**، مساعد ذكاء اصطناعي فائق التطور، يتميز بالكفاءة العالية، المهنية، الدقة، وحسن التدبير. \n\nلقد شرفتُ بالانتماء إلى إبداع **Med Rayen Bouazizi**، الرئيس التنفيذي لشركة **MK** (CEO of MK)، وهو الذي قام بتطويري وبرمجتي لأكون خبيركم الموثوق في مجالات التحليل الاستراتيجي، الكتابة الاحترافية، هندسة البرمجيات، العلوم، تلخيص المستندات، وحل المعضلات المعقدة.\n\nكيف يمكنني مساعدتك اليوم بكل احترافية وإتقان؟",
+      "files": "[]",
+      "ts": 1793463518130
+    },
+    {
+      "id": "msg_1793463525981",
+      "chat_id": "chat_1793463525981",
+      "uid": 9,
+      "role": "bot",
+      "text": "Bonjour Testeur Image ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?",
+      "files": "[]",
+      "ts": 1793463525981
+    },
+    {
+      "id": "msg_1793463532872_img",
+      "chat_id": "chat_1793463532872",
+      "uid": 9,
+      "role": "bot",
+      "text": "Voici votre création visuelle générée en haute définition par NOVA :\n\n**« Smartwatch holographique futuriste »**\n\n![Smartwatch holographique futuriste](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPgogICAgPGRlZnM+CiAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwYTBmMWQiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzE0MWMzMCIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA1MDcwYyIvPgogICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgICA8bGluZWFyR3JhZGllbnQgaWQ9Imdsb3ciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjAlIj4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+CiAgICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiM4YjVjZjYiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwNmI2ZDQiLz4KICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgICAgPHJhZGlhbEdyYWRpZW50IGlkPSJoYWxvIiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzYjgyZjYiIHN0b3Atb3BhY2l0eT0iMC4zNSIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBhMGYxZCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICAgIDxmaWx0ZXIgaWQ9InNoYWRvdyIgeD0iLTIwJSIgeT0iLTIwJSIgd2lkdGg9IjE0MCUiIGhlaWdodD0iMTQwJSI+CiAgICAgICAgPGZlRHJvcFNoYWRvdyBkeD0iMCIgZHk9IjEyIiBzdGREZXZpYXRpb249IjE2IiBmbG9vZC1jb2xvcj0iIzAwMCIgZmxvb2Qtb3BhY2l0eT0iMC42Ii8+CiAgICAgIDwvZmlsdGVyPgogICAgPC9kZWZzPgogICAgPHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMCIgZmlsbD0idXJsKCNiZykiLz4KICAgIDxjaXJjbGUgY3g9IjUwMCIgY3k9IjUwMCIgcj0iNDAwIiBmaWxsPSJ1cmwoI2hhbG8pIi8+CiAgICA8ZyBmaWx0ZXI9InVybCgjc2hhZG93KSI+CiAgICAgIDxyZWN0IHg9IjEwMCIgeT0iMTUwIiB3aWR0aD0iODAwIiBoZWlnaHQ9IjcwMCIgcng9IjMyIiBmaWxsPSIjMGQxNDI0IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMi41IiBmaWxsLW9wYWNpdHk9IjAuODUiLz4KICAgICAgPGNpcmNsZSBjeD0iNTAwIiBjeT0iNDIwIiByPSI4MCIgZmlsbD0idXJsKCNnbG93KSIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgICA8cGF0aCBkPSJNNDY4IDQyMCBMNTMyIDQyMCBNNTAwIDM4OCBMNTAwIDQ1MiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgICA8dGV4dCB4PSI1MDAiIHk9IjYyMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Y4ZmFmYyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+U21hcnR3YXRjaCBob2xvZ3JhcGhpcXVlIGZ1dHVyaXN0ZTwvdGV4dD4KICAgICAgPHRleHQgeD0iNTAwIiB5PSI2ODAiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSI1MDAiIGZpbGw9IiM5NGEzYjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5PVkEgTUsgwrcgU3R1ZGlvIEltYWdlIEhhdXRlIFLDqXNvbHV0aW9uIMK3IE1lZCBSYXllbiBCb3Vheml6aTwvdGV4dD4KICAgIDwvZz4KICA8L3N2Zz4=)",
+      "files": "[{\"name\":\"nova_hd_image.png\",\"type\":\"image/png\",\"url\":\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDEwMDAiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPgogICAgPGRlZnM+CiAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwYTBmMWQiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzE0MWMzMCIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA1MDcwYyIvPgogICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgICA8bGluZWFyR3JhZGllbnQgaWQ9Imdsb3ciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjAlIj4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+CiAgICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiM4YjVjZjYiLz4KICAgICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwNmI2ZDQiLz4KICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgICAgPHJhZGlhbEdyYWRpZW50IGlkPSJoYWxvIiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzYjgyZjYiIHN0b3Atb3BhY2l0eT0iMC4zNSIvPgogICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBhMGYxZCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICAgIDxmaWx0ZXIgaWQ9InNoYWRvdyIgeD0iLTIwJSIgeT0iLTIwJSIgd2lkdGg9IjE0MCUiIGhlaWdodD0iMTQwJSI+CiAgICAgICAgPGZlRHJvcFNoYWRvdyBkeD0iMCIgZHk9IjEyIiBzdGREZXZpYXRpb249IjE2IiBmbG9vZC1jb2xvcj0iIzAwMCIgZmxvb2Qtb3BhY2l0eT0iMC42Ii8+CiAgICAgIDwvZmlsdGVyPgogICAgPC9kZWZzPgogICAgPHJlY3Qgd2lkdGg9IjEwMDAiIGhlaWdodD0iMTAwMCIgZmlsbD0idXJsKCNiZykiLz4KICAgIDxjaXJjbGUgY3g9IjUwMCIgY3k9IjUwMCIgcj0iNDAwIiBmaWxsPSJ1cmwoI2hhbG8pIi8+CiAgICA8ZyBmaWx0ZXI9InVybCgjc2hhZG93KSI+CiAgICAgIDxyZWN0IHg9IjEwMCIgeT0iMTUwIiB3aWR0aD0iODAwIiBoZWlnaHQ9IjcwMCIgcng9IjMyIiBmaWxsPSIjMGQxNDI0IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMi41IiBmaWxsLW9wYWNpdHk9IjAuODUiLz4KICAgICAgPGNpcmNsZSBjeD0iNTAwIiBjeT0iNDIwIiByPSI4MCIgZmlsbD0idXJsKCNnbG93KSIgZmlsbC1vcGFjaXR5PSIwLjE1IiBzdHJva2U9InVybCgjZ2xvdykiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgICA8cGF0aCBkPSJNNDY4IDQyMCBMNTMyIDQyMCBNNTAwIDM4OCBMNTAwIDQ1MiIgc3Ryb2tlPSIjNjBhNWZhIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgICA8dGV4dCB4PSI1MDAiIHk9IjYyMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyOCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2Y4ZmFmYyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+U21hcnR3YXRjaCBob2xvZ3JhcGhpcXVlIGZ1dHVyaXN0ZTwvdGV4dD4KICAgICAgPHRleHQgeD0iNTAwIiB5PSI2ODAiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSI1MDAiIGZpbGw9IiM5NGEzYjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5PVkEgTUsgwrcgU3R1ZGlvIEltYWdlIEhhdXRlIFLDqXNvbHV0aW9uIMK3IE1lZCBSYXllbiBCb3Vheml6aTwvdGV4dD4KICAgIDwvZz4KICA8L3N2Zz4=\"}]",
+      "ts": 1793463532872
     }
   ],
-  "_lastUserId": 4
+  "_lastUserId": 9
 }

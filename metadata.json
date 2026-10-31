@@ -1,6 +1,6 @@
 {
-  "name": "NOVA",
-  "description": "Assistant IA nouvelle génération développé par Med Rayen Bouazizi CEO of MK avec interface ultra-moderne, vue A4, scanner Bluetooth avancé et gestion documentaire.",
+  "name": "NOVA — Assistant IA d'Élite & Smart Watch",
+  "description": "Assistant IA d'élite développé par Med Rayen Bouazizi, CEO of MK avec liaison Smart Watch BLE, recherche internet, synthèse vocale trilingue et localisation d'urgences médicales.",
   "permissions": [],
   "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
