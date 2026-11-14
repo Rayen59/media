@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "node -c server.js"
+    "build": "node -c server.js",
+    "lint": "node -c server.js && node -c db.js && node -c public/sw.js"
   },
   "engines": {
     "node": ">=20.0.0"

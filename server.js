@@ -111,6 +111,10 @@ const limit = (n, ms) => (q, r, x) => {
 
 const app = express();
 app.set('trust proxy', 1);
+app.use((q, r, x) => {
+  r.setHeader('Permissions-Policy', 'bluetooth=(*), microphone=(*), geolocation=(*)');
+  x();
+});
 app.use(express.json({ limit: '40mb' }), cookie());
 
 // Serve client-side PDF libraries cleanly from node_modules
@@ -528,7 +532,86 @@ async function generateWithRetry(ai, params, timeoutMs = 85000) {
 
 // ===== GÉNÉRATEUR D'ILLUSTRATIONS VECTORIELLES HD (FREE TIER + EXPORT PNG 2K) =====
 
-async function generateHighQualityImage(prompt, aspectRatio = '1:1') {
+function sanitizeAndValidateSvg(rawText, width, height) {
+  let text = String(rawText || '').trim();
+  if (!text) return null;
+
+  // Strip markdown fences if present
+  text = text.replace(/^```(?:xml|svg|html)?\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  const startIdx = text.search(/<svg[\s>]/i);
+  if (startIdx === -1) return null;
+  let svg = text.slice(startIdx);
+
+  const endIdx = svg.search(/<\/svg>/i);
+  if (endIdx !== -1) {
+    svg = svg.slice(0, endIdx);
+  }
+
+  // Strip unsafe or external elements that break <img> data URI or canvas export
+  svg = svg
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/<image\b[^>]*\b(?:href|xlink:href)\s*=\s*["']https?:\/\/[^"']*["'][^>]*\/?>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+  // Recover unclosed <defs> or <g> tags cleanly before closing </svg>
+  if (/<defs[\s>]/i.test(svg) && !/<\/defs>/i.test(svg)) svg += '</defs>';
+  const openG = (svg.match(/<g[\s>]/gi) || []).length;
+  const closeG = (svg.match(/<\/g>/gi) || []).length;
+  for (let i = 0; i < Math.max(0, openG - closeG); i++) svg += '</g>';
+  svg += '</svg>';
+
+  // Ensure root <svg> attributes are valid for strict XML parsing inside <img>
+  svg = svg.replace(/<svg\b([^>]*)>/i, (_, attrs) => {
+    let cleanAttrs = attrs;
+    if (!/\bxmlns\s*=/i.test(cleanAttrs)) {
+      cleanAttrs += ' xmlns="http://www.w3.org/2000/svg"';
+    }
+    if (!/\bviewBox\s*=/i.test(cleanAttrs)) {
+      cleanAttrs += ` viewBox="0 0 ${width} ${height}"`;
+    }
+    if (!/\bwidth\s*=/i.test(cleanAttrs)) {
+      cleanAttrs += ` width="${width}"`;
+    }
+    if (!/\bheight\s*=/i.test(cleanAttrs)) {
+      cleanAttrs += ` height="${height}"`;
+    }
+    return `<svg${cleanAttrs}>`;
+  });
+
+  // Escape unescaped ampersands so strict SVG XML parser never fails
+  svg = svg.replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+
+  // Must contain actual vector shapes
+  if (!/<(path|circle|rect|polygon|ellipse|line|polyline)\b/i.test(svg)) {
+    return null;
+  }
+
+  return svg;
+}
+
+function sanitizeImageAlt(prompt) {
+  return (
+    String(prompt || 'Illustration NOVA MK')
+      .replace(/[\[\]()\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 110) || 'Illustration NOVA MK'
+  );
+}
+
+function extractImagePrompt(text) {
+  const cleaned = String(text || '')
+    .replace(
+      /^(?:s['’]?il te pla[îi]t\s*,?\s*|peux[- ]tu\s+|pourrais[- ]tu\s+|je veux\s+(?:que tu\s+)?|merci de\s+)?(?:g[ée]n[èe]re[rz]?|cr[ée]e[rz]?|construi[st]|construire|fais|faire|dessine[rz]?|illustre[rz]?|peins|produis|imagine[rz]?|montre|donne|make|create|build|draw|generate|render|paint|ارسم|انشئ|اصنع|صمم)(?:[- ]moi|[- ]nous)?\s*(?:une|un|des|l['’]|la|le|a|an|the)?\s*(?:image|photo|illustration|dessin|tableau|affiche|logo|portrait|avatar|picture|artwork|صورة|رسم)?\s*(?:d['’]|de|du|des|avec|sur|pour|of|about|with)?\s*/i,
+      ''
+    )
+    .trim();
+  return cleaned || String(text || '').trim();
+}
+
+async function generateHighQualityImage(prompt, aspectRatio = '1:1', referenceFiles = []) {
   const ai = getAiClient();
   if (!ai) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
 
@@ -545,43 +628,65 @@ async function generateHighQualityImage(prompt, aspectRatio = '1:1') {
 
   const svgPrompt = `Tu es un directeur artistique et illustrateur vectoriel SVG d'élite mondiale.
 Crée une illustration SVG autonome époustouflante, riche, très détaillée et esthétique représentant : "${cleanPrompt}".
+${referenceFiles.length ? "Inspire-toi fidèlement de l'image ou du document joint pour construire ou transformer cette illustration." : ''}
 
 RÈGLES TECHNIQUES STRICTES :
 1. Balise racine exacte : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"> ... </svg>
 2. Utilise des dégradés riches (<linearGradient>, <radialGradient>), des filtres lumineux ou d'ombre (<filter> avec feGaussianBlur / feDropShadow), de nombreuses formes composées (<path>, <circle>, <ellipse>, <polygon>, <rect>) en couches successives (arrière-plan atmosphérique, plan intermédiaire, sujet principal très détaillé, reflets et particules lumineuses).
 3. Sois fidèle au sujet demandé (personnages, animaux, paysages, objets scientifiques, schémas, architecture, scène futuriste, etc.) avec de vraies proportions artistiques, des ombres et lumières cohérentes.
-4. N'ajoute PAS de texte parasite ou de filigrane sauf si la description demande explicitement du texte.
-5. Réponds STRICTEMENT et UNIQUEMENT avec le code SVG brut commençant par <svg et finissant par </svg>, sans balises markdown \`\`\` et sans explication.`;
+4. XML STRICTEMENT VALIDE : n'utilise JAMAIS le caractère "&" nu (écris "&amp;"), pas de balises <script>, pas de <foreignObject>, pas de lien <image href="http...">.
+5. N'ajoute PAS de texte parasite ou de filigrane sauf si la description demande explicitement du texte.
+6. Réponds STRICTEMENT et UNIQUEMENT avec le code SVG brut commençant par <svg et finissant par </svg>, sans balises markdown \`\`\` et sans explication.`;
 
-  try {
-    const svgRes = await generateWithRetry(
-      ai,
-      {
-        model: DEFAULT_MODEL,
-        contents: svgPrompt,
-        config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM }
-        }
-      },
-      45000
-    );
+  const parts = [...buildFileParts(referenceFiles), { text: svgPrompt }];
+  const imageCandidateModels = [
+    { model: DEFAULT_MODEL, config: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } },
+    { model: 'gemini-3.1-flash-lite', config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } }
+  ];
 
-    const svgText = svgRes.text || '';
-    const match = svgText.match(/<svg[\s\S]*?<\/svg>/i);
-    if (match) {
-      let cleanSvg = match[0];
-      if (!cleanSvg.includes('xmlns=')) {
-        cleanSvg = cleanSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  let lastAuthErr = null;
+  for (const candidate of imageCandidateModels) {
+    try {
+      const svgRes = await generateWithRetry(
+        ai,
+        {
+          model: candidate.model,
+          contents: [{ role: 'user', parts }],
+          config: candidate.config
+        },
+        75000
+      );
+
+      const cleanSvg = sanitizeAndValidateSvg(svgRes.text || '', width, height);
+      if (cleanSvg) {
+        const b64 = Buffer.from(cleanSvg, 'utf8').toString('base64');
+        return {
+          imageUrl: `data:image/svg+xml;base64,${b64}`,
+          modelUsed: candidate.model,
+          isFallback: false
+        };
       }
-      const b64 = Buffer.from(cleanSvg, 'utf8').toString('base64');
-      return `data:image/svg+xml;base64,${b64}`;
+    } catch (err) {
+      const msg = String(err?.message || '');
+      console.warn(`Image gen attempt (${candidate.model}) failed:`, msg);
+      if (msg.includes('PERMISSION_DENIED') || msg.includes('API_KEY_INVALID') || msg.includes('403') || msg.includes('401')) {
+        lastAuthErr = err;
+      }
     }
-  } catch (err) {
-    console.warn('SVG image gen fallback:', err.message);
   }
 
-  // Fallback graphique vectoriel stylisé si échec
-  const safeTitle = cleanPrompt.slice(0, 56).replace(/[<>&"']/g, '');
+  if (lastAuthErr) {
+    throw lastAuthErr;
+  }
+
+  // Fallback graphique vectoriel stylisé et XML-safe si la réponse n'a pas pu être parsée
+  const safeTitle = cleanPrompt.slice(0, 48).replace(/[<>&"']/g, c => ({
+    '<': '&lt;',
+    '>': '&gt;',
+    '&': '&amp;',
+    '"': '&quot;',
+    "'": '&apos;'
+  }[c]));
   const proceduralSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -595,19 +700,24 @@ RÈGLES TECHNIQUES STRICTES :
         <stop offset="100%" stop-color="#06b6d4"/>
       </linearGradient>
       <radialGradient id="halo" cx="50%" cy="45%" r="50%">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.38"/>
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.42"/>
         <stop offset="100%" stop-color="#070b16" stop-opacity="0"/>
       </radialGradient>
     </defs>
     <rect width="${width}" height="${height}" fill="url(#bg)"/>
     <circle cx="${width / 2}" cy="${height * 0.45}" r="${Math.min(width, height) * 0.42}" fill="url(#halo)"/>
-    <rect x="${width * 0.1}" y="${height * 0.14}" width="${width * 0.8}" height="${height * 0.72}" rx="28" fill="#0d1424" stroke="url(#glow)" stroke-width="2.5" fill-opacity="0.88"/>
-    <circle cx="${width / 2}" cy="${height * 0.42}" r="72" fill="url(#glow)" fill-opacity="0.18" stroke="url(#glow)" stroke-width="2.5"/>
-    <polygon points="${width / 2},${height * 0.42 - 36} ${width / 2 + 34},${height * 0.42 + 24} ${width / 2 - 34},${height * 0.42 + 24}" fill="none" stroke="#60a5fa" stroke-width="3"/>
-    <text x="${width / 2}" y="${height * 0.63}" font-family="system-ui, sans-serif" font-size="26" font-weight="700" fill="#f8fafc" text-anchor="middle">${safeTitle}</text>
-    <text x="${width / 2}" y="${height * 0.70}" font-family="system-ui, sans-serif" font-size="15" font-weight="500" fill="#94a3b8" text-anchor="middle">NOVA MK · Studio Créatif</text>
+    <rect x="${width * 0.08}" y="${height * 0.12}" width="${width * 0.84}" height="${height * 0.76}" rx="28" fill="#0d1424" stroke="url(#glow)" stroke-width="2.5" fill-opacity="0.9"/>
+    <circle cx="${width / 2}" cy="${height * 0.4}" r="76" fill="url(#glow)" fill-opacity="0.18" stroke="url(#glow)" stroke-width="2.5"/>
+    <path d="M ${width / 2 - 48} ${height * 0.45} L ${width / 2 - 12} ${height * 0.36} L ${width / 2 + 16} ${height * 0.42} L ${width / 2 + 48} ${height * 0.33} L ${width / 2 + 54} ${height * 0.46} Z" fill="url(#glow)" opacity="0.85"/>
+    <circle cx="${width / 2 - 22}" cy="${height * 0.35}" r="9" fill="#f8fafc" opacity="0.9"/>
+    <text x="${width / 2}" y="${height * 0.64}" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="middle">${safeTitle}</text>
+    <text x="${width / 2}" y="${height * 0.71}" font-family="system-ui, sans-serif" font-size="14" font-weight="500" fill="#94a3b8" text-anchor="middle">NOVA MK · Studio Créatif</text>
   </svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(proceduralSvg, 'utf8').toString('base64')}`;
+  return {
+    imageUrl: `data:image/svg+xml;base64,${Buffer.from(proceduralSvg, 'utf8').toString('base64')}`,
+    modelUsed: DEFAULT_MODEL,
+    isFallback: true
+  };
 }
 
 // ===== GÉNÉRATEUR DE QCM STRUCTURÉ (JSON SCHEMA) =====
@@ -656,10 +766,17 @@ function buildFileParts(files = []) {
     }
     rawData = rawData.trim();
     if (!rawData) continue;
+    if (f.type === 'image/svg+xml') {
+      try {
+        const svgSource = Buffer.from(rawData, 'base64').toString('utf8').slice(0, 12000);
+        parts.push({ text: `[Image vectorielle SVG jointe (${f.name || 'image.svg'})] :\n${svgSource}` });
+      } catch (e) {}
+      continue;
+    }
     const mimeType =
       f.type === 'application/pdf'
         ? 'application/pdf'
-        : /^image\/(png|gif|webp|svg\+xml)$/.test(f.type)
+        : /^image\/(png|gif|webp)$/.test(f.type)
           ? f.type
           : 'image/jpeg';
     parts.push({ inlineData: { mimeType, data: rawData } });
@@ -762,7 +879,7 @@ function loadChatHistoryContents(chatId, uid) {
   for (const row of historyRows) {
     if (!row.text) continue;
     // Strip inline base64 data URIs from history so context stays light and fast
-    const cleanedText = row.text.replace(/!\[([^\]]*)\]\(data:image\/[^\)]+\)/g, '[Image générée: $1]').trim();
+    const cleanedText = row.text.replace(/!\[([^\]]*)\]\(data:image\/[^)\s]+\)/g, '[Image générée: $1]').trim();
     if (!cleanedText) continue;
     contents.push({
       role: row.role === 'user' ? 'user' : 'model',
@@ -838,30 +955,34 @@ app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
 // ===== ENDPOINT GÉNÉRATION D'IMAGES =====
 
 app.post('/api/generate-image', auth, limit(30, 6e4), async (q, r) => {
+  const startTime = Date.now();
   try {
     const prompt = String(q.body.prompt || '').trim();
     const aspectRatio = String(q.body.aspectRatio || '1:1');
     const chatId = String(q.body.chatId || '').trim();
+    const files = Array.isArray(q.body.files) ? q.body.files.slice(0, 4) : [];
 
     if (!prompt) {
       return r.status(400).json({ error: 'Veuillez saisir une description pour votre image.' });
     }
 
-    const imageUrl = await generateHighQualityImage(prompt, aspectRatio);
+    const gen = await generateHighQualityImage(prompt, aspectRatio, files);
+    const imageUrl = gen.imageUrl;
+    const safeAlt = sanitizeImageAlt(prompt);
     const now = Date.now();
     const currentChatId = ensureChatExists(chatId, q.u.id, 'Image : ' + prompt.slice(0, 24));
 
     const botMsgId = 'msg_' + now + '_img';
-    const textDesc = `Voici votre création visuelle générée par NOVA :\n\n**« ${prompt} »**\n\n![${prompt}](${imageUrl})`;
+    const textDesc = `Voici votre création visuelle générée par NOVA :\n\n**« ${safeAlt} »**\n\n![${safeAlt}](${imageUrl})`;
+    const extraFiles = [{ type: 'nova/image', url: imageUrl, name: safeAlt, isSvg: imageUrl.startsWith('data:image/svg+xml') }];
 
-    // Store empty files array so image isn't rendered twice (already inside markdown)
     db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
       botMsgId,
       currentChatId,
       q.u.id,
       'bot',
       textDesc,
-      '[]',
+      JSON.stringify(extraFiles),
       now
     );
     db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now, currentChatId);
@@ -871,9 +992,12 @@ app.post('/api/generate-image', auth, limit(30, 6e4), async (q, r) => {
       imageUrl,
       prompt,
       text: textDesc,
-      speechSummary: `Illustration générée pour : ${prompt.slice(0, 60)}`,
+      files: extraFiles,
+      speechSummary: `Illustration générée pour : ${safeAlt.slice(0, 60)}`,
       chatId: currentChatId,
-      botMsgId
+      botMsgId,
+      modelUsed: gen.modelUsed,
+      durationMs: Date.now() - startTime
     });
   } catch (e) {
     console.error('API generate-image error:', e);
@@ -1193,11 +1317,23 @@ async function prepareChatContext(q) {
       text
     );
 
-  const isImagePrompt =
-    !files.length &&
-    /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|ارسم)\b.*(image|photo|illustration|dessin|tableau|picture|صورة|رسم)/i.test(
+  const isTechImageTopic = /\b(docker|iso|disque|container|conteneur|vm|virtualbox|linux)\b/i.test(text);
+  const hasImageCreateVerb =
+    /\b(g[ée]n[èe]re[rz]?|cr[ée]e[rz]?|construi[st]|construire|fais|faire|dessine[rz]?|illustre[rz]?|peins|peindre|produis|imagine[rz]?|montre[- ]moi|donne[- ]moi|make|create|build|draw|generate|render|paint|ارسم|انشئ|اصنع|صمم)\b/i.test(
       text
     );
+  const hasImageNoun =
+    /\b(image|images|photo|photos|illustration|illustrations|dessin|dessins|tableau|affiche|logo|portrait|avatar|picture|wallpaper|artwork|صورة|رسم)\b/i.test(
+      text
+    );
+  const hasImageEditVerb =
+    files.some(f => f.type && f.type.startsWith('image/')) &&
+    /\b(modifie|transforme|[ée]dite|retouche|change|redessine|edit|modify|transform|redraw)\b/i.test(text);
+
+  const isImagePrompt =
+    !isPdfRequest &&
+    !isTechImageTopic &&
+    ((hasImageCreateVerb && hasImageNoun) || hasImageEditVerb);
 
   const isAutoQcmPrompt =
     !isPdfRequest &&
@@ -1283,35 +1419,33 @@ app.post('/api/chat/stream', auth, limit(60, 6e4), async (q, r) => {
 
     // 1. Auto-image generation
     if (ctx.isImagePrompt) {
-      const imagePrompt =
-        ctx.text
-          .replace(
-            /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|ارسم)\s*(moi|une|un|des|le|la|image|photo|illustration|dessin|picture|صورة|رسم)*\s*(de|d'|d’|pour|of|about)?\s*/i,
-            ''
-          )
-          .trim() || ctx.text;
-      const imageUrl = await generateHighQualityImage(imagePrompt, '1:1');
-      const botMsgText = `Voici votre illustration générée par NOVA :\n\n**« ${imagePrompt} »**\n\n![${imagePrompt}](${imageUrl})`;
+      const imagePrompt = extractImagePrompt(ctx.text);
+      const gen = await generateHighQualityImage(imagePrompt, '1:1', ctx.files);
+      const imageUrl = gen.imageUrl;
+      const safeAlt = sanitizeImageAlt(imagePrompt);
+      const botMsgText = `Voici votre illustration générée par NOVA :\n\n**« ${safeAlt} »**\n\n![${safeAlt}](${imageUrl})`;
+      const extraFiles = [{ type: 'nova/image', url: imageUrl, name: safeAlt, isSvg: imageUrl.startsWith('data:image/svg+xml') }];
       const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
         ctx.currentChatId,
         q.u.id,
         ctx.text,
         ctx.files,
         botMsgText,
-        []
+        extraFiles
       );
       sendEvent('chunk', { delta: botMsgText });
       sendEvent('done', {
         ok: true,
         text: botMsgText,
         imageUrl,
-        speechSummary: `Illustration générée pour ${imagePrompt.slice(0, 60)}`,
+        files: extraFiles,
+        speechSummary: `Illustration générée pour ${safeAlt.slice(0, 60)}`,
         detectedLang: detectLanguage(ctx.text),
         chatId: ctx.currentChatId,
         userMsgId,
         botMsgId,
         title: chatTitle,
-        modelUsed: DEFAULT_MODEL,
+        modelUsed: gen.modelUsed,
         durationMs: Date.now() - startTime
       });
       return r.end();
@@ -1463,34 +1597,32 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     }
 
     if (ctx.isImagePrompt) {
-      const imagePrompt =
-        ctx.text
-          .replace(
-            /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|ارسم)\s*(moi|une|un|des|le|la|image|photo|illustration|dessin|picture|صورة|رسم)*\s*(de|d'|d’|pour|of|about)?\s*/i,
-            ''
-          )
-          .trim() || ctx.text;
-      const imageUrl = await generateHighQualityImage(imagePrompt, '1:1');
-      const botMsgText = `Voici votre illustration générée par NOVA :\n\n**« ${imagePrompt} »**\n\n![${imagePrompt}](${imageUrl})`;
+      const imagePrompt = extractImagePrompt(ctx.text);
+      const gen = await generateHighQualityImage(imagePrompt, '1:1', ctx.files);
+      const imageUrl = gen.imageUrl;
+      const safeAlt = sanitizeImageAlt(imagePrompt);
+      const botMsgText = `Voici votre illustration générée par NOVA :\n\n**« ${safeAlt} »**\n\n![${safeAlt}](${imageUrl})`;
+      const extraFiles = [{ type: 'nova/image', url: imageUrl, name: safeAlt, isSvg: imageUrl.startsWith('data:image/svg+xml') }];
       const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
         ctx.currentChatId,
         q.u.id,
         ctx.text,
         ctx.files,
         botMsgText,
-        []
+        extraFiles
       );
       return r.json({
         ok: true,
         text: botMsgText,
         imageUrl,
-        speechSummary: `Illustration générée pour ${imagePrompt.slice(0, 60)}`,
+        files: extraFiles,
+        speechSummary: `Illustration générée pour ${safeAlt.slice(0, 60)}`,
         detectedLang: detectLanguage(ctx.text),
         chatId: ctx.currentChatId,
         userMsgId,
         botMsgId,
         title: chatTitle,
-        modelUsed: DEFAULT_MODEL,
+        modelUsed: gen.modelUsed,
         durationMs: Date.now() - startTime
       });
     }
