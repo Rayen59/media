@@ -85,13 +85,15 @@ class SimpleDB {
             .sort((a, b) => (b.updated || 0) - (a.updated || 0));
           return list.map(c => ({ id: c.id, title: c.title, created: c.created, updated: c.updated }));
         }
-        // All chat messages
-        if (s.includes('FROM chat_msgs WHERE chat_id=? AND uid=? ORDER BY ts ASC LIMIT 20')) {
+        // All chat messages (with optional LIMIT N taking the most recent N messages)
+        const limitMatch = s.match(/FROM chat_msgs WHERE chat_id=\? AND uid=\? ORDER BY ts ASC LIMIT (\d+)/);
+        if (limitMatch) {
           const [chatId, uid] = params;
+          const limitNum = parseInt(limitMatch[1], 10) || 20;
           const list = db.data.chat_msgs
             .filter(m => m.chat_id === String(chatId) && m.uid === Number(uid))
             .sort((a, b) => (a.ts || 0) - (b.ts || 0))
-            .slice(-20);
+            .slice(-limitNum);
           return list.map(m => ({ id: m.id, role: m.role, text: m.text, files: m.files, ts: m.ts }));
         }
         if (s.includes('FROM chat_msgs WHERE chat_id=? AND uid=? ORDER BY ts ASC')) {
@@ -123,7 +125,7 @@ class SimpleDB {
             name: String(name || cleanEmail.split('@')[0]),
             pass: String(pass),
             verified: 1,
-            model: String(model || 'gemini-2.5-flash'),
+            model: String(model || 'gemini-4-hydrogen'),
             settings: String(settings || '{}'),
             created: Number(created || Date.now())
           });

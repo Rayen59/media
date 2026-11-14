@@ -3,17 +3,16 @@ const Database = require('./db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie-parser');
-const crypto = require('crypto');
 const path = require('path');
 const dns = require('dns');
-const { GoogleGenAI } = require('@google/genai');
+const fs = require('fs');
+const { GoogleGenAI, ThinkingLevel, Type } = require('@google/genai');
 
 // Prioritize IPv4 for instantaneous Google API resolution
 dns.setDefaultResultOrder('ipv4first');
 
 // Load environment variables from /app/.dev.env.json if available
 try {
-  const fs = require('fs');
   const devEnvPath = fs.existsSync('/app/.dev.env.json')
     ? '/app/.dev.env.json'
     : path.join(__dirname, '..', '.dev.env.json');
@@ -29,10 +28,14 @@ try {
 
 const E = process.env;
 const SECRET = E.JWT_SECRET || 'nova-gemini-secret-2026';
-const getGeminiApiKey = () => process.env.GEMINI_API_KEY || process.env.API_KEY || E.GEMINI_API_KEY || E.API_KEY || '';
+const DEFAULT_MODEL = 'gemini-4-hydrogen';
+
+const getGeminiApiKey = () =>
+  process.env.GEMINI_API_KEY || process.env.API_KEY || E.GEMINI_API_KEY || E.API_KEY || '';
+
 const getAiClient = () => {
   const apiKey = getGeminiApiKey();
-  if (!apiKey) return null;
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') return null;
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
@@ -54,7 +57,7 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT,
   pass TEXT NOT NULL,
   verified INTEGER DEFAULT 1,
-  model TEXT DEFAULT 'gemini-2.5-flash',
+  model TEXT DEFAULT 'gemini-4-hydrogen',
   settings TEXT DEFAULT '{}',
   created INTEGER
 );
@@ -81,9 +84,16 @@ CREATE INDEX IF NOT EXISTS idx_chat_msgs_chat ON chat_msgs(chat_id, ts);
 `);
 
 // Safe migrations
-try { db.exec('ALTER TABLE users ADD COLUMN name TEXT'); } catch(e){}
-try { db.exec('ALTER TABLE users ADD COLUMN model TEXT DEFAULT "gemini-2.5-flash"'); } catch(e){}
-try { db.exec('ALTER TABLE users ADD COLUMN settings TEXT DEFAULT "{}"'); } catch(e){}
+try { db.exec('ALTER TABLE users ADD COLUMN name TEXT'); } catch (e) {}
+try { db.exec('ALTER TABLE users ADD COLUMN model TEXT DEFAULT "gemini-4-hydrogen"'); } catch (e) {}
+try { db.exec('ALTER TABLE users ADD COLUMN settings TEXT DEFAULT "{}"'); } catch (e) {}
+
+// Normalize legacy/unsupported model names to active free-tier Gemini models
+function normalizeModelName(modelStr) {
+  const m = String(modelStr || '').trim();
+  if (m === 'gemini-3.1-flash-lite') return 'gemini-3.1-flash-lite';
+  return DEFAULT_MODEL;
+}
 
 // Rate limiter
 const hits = new Map();
@@ -91,7 +101,9 @@ const limit = (n, ms) => (q, r, x) => {
   const k = q.ip + q.path;
   const t = Date.now();
   const a = (hits.get(k) || []).filter(v => t - v < ms);
-  if (a.length >= n) return r.status(429).json({ error: 'Trop de requêtes, veuillez patienter un instant.' });
+  if (a.length >= n) {
+    return r.status(429).json({ error: 'Trop de requêtes, veuillez patienter un instant.' });
+  }
   a.push(t);
   hits.set(k, a);
   x();
@@ -99,9 +111,19 @@ const limit = (n, ms) => (q, r, x) => {
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '35mb' }), cookie(), express.static(path.join(__dirname, 'public')));
+app.use(express.json({ limit: '40mb' }), cookie());
 
-// Authentication middleware (supports Bearer header and SameSite None cross-origin cookies)
+// Serve client-side PDF libraries cleanly from node_modules
+app.get('/vendor/jspdf.umd.min.js', (q, r) => {
+  r.sendFile(path.join(__dirname, 'node_modules', 'jspdf', 'dist', 'jspdf.umd.min.js'));
+});
+app.get('/vendor/html2canvas.min.js', (q, r) => {
+  r.sendFile(path.join(__dirname, 'node_modules', 'html2canvas', 'dist', 'html2canvas.min.js'));
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Authentication middleware
 const auth = (q, r, x) => {
   try {
     const authH = q.headers.authorization;
@@ -127,7 +149,6 @@ const okEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) && e.length < 255;
 
 // ===== AUTH ROUTES =====
 
-// Register: Strictly enforces single email usage
 app.post('/api/register', limit(15, 36e5), async (q, r) => {
   try {
     const email = String(q.body.email || '').trim().toLowerCase();
@@ -137,10 +158,11 @@ app.post('/api/register', limit(15, 36e5), async (q, r) => {
     if (!okEmail(email)) return r.status(400).json({ error: 'Format d’adresse e-mail invalide.' });
     if (pw.length < 6) return r.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
 
-    // STRICT UNIQUE CHECK: An email cannot be registered more than once!
     const existing = db.prepare('SELECT id FROM users WHERE email=?').get(email);
     if (existing) {
-      return r.status(409).json({ error: 'Cette adresse e-mail est déjà utilisée. Un compte existe déjà avec cette adresse.' });
+      return r.status(409).json({
+        error: 'Cette adresse e-mail est déjà utilisée. Un compte existe déjà avec cette adresse.'
+      });
     }
 
     const hashed = bcrypt.hashSync(pw, 10);
@@ -154,24 +176,41 @@ app.post('/api/register', limit(15, 36e5), async (q, r) => {
       btAuto: false,
       speed: 'normal',
       compact: false,
-      model: 'gemini-2.5-flash',
-      temp: 0.7,
-      tokens: 2048,
-      stream: false
+      model: DEFAULT_MODEL,
+      powerMode: 'max',
+      webSearch: true,
+      voiceLang: 'auto'
     };
 
-    const res = db.prepare('INSERT INTO users(email, name, pass, verified, model, settings, created) VALUES(?,?,?,1,?,?,?)')
-      .run(email, name, hashed, 'gemini-2.5-flash', JSON.stringify(defaultSettings), now);
+    const res = db
+      .prepare('INSERT INTO users(email, name, pass, verified, model, settings, created) VALUES(?,?,?,1,?,?,?)')
+      .run(email, name, hashed, DEFAULT_MODEL, JSON.stringify(defaultSettings), now);
     const userId = res.lastInsertRowid;
 
-    // Create initial conversation
     const defaultChatId = 'chat_' + now;
-    db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)')
-      .run(defaultChatId, userId, 'Bienvenue sur NOVA', now, now);
+    db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)').run(
+      defaultChatId,
+      userId,
+      'Bienvenue sur NOVA',
+      now,
+      now
+    );
 
-    const welcomeMsg = 'Bonjour ' + name + ' ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\nJe suis prêt à vous accompagner dans vos analyses, résolutions de problèmes, synthèses documentaires ou créations de projets. Sur quoi souhaitez-vous travailler ?';
-    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
-      .run('msg_' + now, defaultChatId, userId, 'bot', welcomeMsg, '[]', now);
+    const welcomeMsg =
+      'Bonjour ' +
+      name +
+      ' ! Je suis **NOVA**, votre assistant d’intelligence artificielle d’élite, développé par **Med Rayen Bouazizi, CEO of MK**.\n\n' +
+      'Je peux désormais rédiger des textes d’exception, **créer des documents PDF professionnels**, générer des **QCM interactifs avec corrigé**, préparer ou résoudre des **devoirs complets**, créer des **illustrations vectorielles HD/PNG**, analyser vos **photos et PDF**, et effectuer des recherches internet en direct.\n\nSur quoi souhaitez-vous travailler ?';
+
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      'msg_' + now,
+      defaultChatId,
+      userId,
+      'bot',
+      welcomeMsg,
+      '[]',
+      now
+    );
 
     const token = setTok(r, userId);
     return r.json({
@@ -181,20 +220,21 @@ app.post('/api/register', limit(15, 36e5), async (q, r) => {
         id: userId,
         email,
         name,
-        model: 'gemini-2.5-flash',
+        model: DEFAULT_MODEL,
         settings: defaultSettings
       }
     });
   } catch (e) {
     console.error('Register error:', e);
     if (e.message && e.message.includes('UNIQUE constraint failed')) {
-      return r.status(409).json({ error: 'Cette adresse e-mail est déjà utilisée. Un compte existe déjà avec cette adresse.' });
+      return r.status(409).json({
+        error: 'Cette adresse e-mail est déjà utilisée. Un compte existe déjà avec cette adresse.'
+      });
     }
     return r.status(500).json({ error: 'Erreur lors de la création du compte.' });
   }
 });
 
-// Login
 app.post('/api/login', limit(25, 9e5), (q, r) => {
   const email = String(q.body.email || '').trim().toLowerCase();
   const pw = String(q.body.password || '');
@@ -206,7 +246,12 @@ app.post('/api/login', limit(25, 9e5), (q, r) => {
   }
 
   const token = setTok(r, u.id);
-  const userSettings = JSON.parse(u.settings || '{}');
+  let userSettings = {};
+  try {
+    userSettings = JSON.parse(u.settings || '{}');
+  } catch (e) {}
+  userSettings.model = normalizeModelName(userSettings.model || u.model);
+
   return r.json({
     ok: true,
     token,
@@ -214,7 +259,7 @@ app.post('/api/login', limit(25, 9e5), (q, r) => {
       id: u.id,
       email: u.email,
       name: u.name || email.split('@')[0],
-      model: u.model || 'gemini-2.5-flash',
+      model: normalizeModelName(u.model),
       settings: userSettings
     }
   });
@@ -227,12 +272,17 @@ app.post('/api/logout', (q, r) => {
 
 app.get('/api/me', auth, (q, r) => {
   const u = q.u;
-  const userSettings = JSON.parse(u.settings || '{}');
+  let userSettings = {};
+  try {
+    userSettings = JSON.parse(u.settings || '{}');
+  } catch (e) {}
+  userSettings.model = normalizeModelName(userSettings.model || u.model);
+
   r.json({
     id: u.id,
     email: u.email,
     name: u.name || u.email.split('@')[0],
-    model: u.model || 'gemini-2.5-flash',
+    model: normalizeModelName(u.model),
     settings: userSettings
   });
 });
@@ -241,12 +291,12 @@ app.post('/api/change-password', auth, (q, r) => {
   const oldPw = String(q.body.oldPassword || '');
   const newPw = String(q.body.newPassword || '');
   if (!oldPw || !newPw) return r.status(400).json({ error: 'Veuillez remplir tous les champs.' });
-  if (newPw.length < 6) return r.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères.' });
-
+  if (newPw.length < 6) {
+    return r.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères.' });
+  }
   if (!bcrypt.compareSync(oldPw, q.u.pass)) {
     return r.status(400).json({ error: 'Mot de passe actuel incorrect.' });
   }
-
   const hashed = bcrypt.hashSync(newPw, 10);
   db.prepare('UPDATE users SET pass=? WHERE id=?').run(hashed, q.u.id);
   r.json({ ok: true, message: 'Mot de passe modifié avec succès.' });
@@ -258,10 +308,11 @@ app.put('/api/settings', auth, (q, r) => {
     db.prepare('UPDATE users SET name=? WHERE id=?').run(name.trim().slice(0, 100), q.u.id);
   }
   if (model && typeof model === 'string') {
-    db.prepare('UPDATE users SET model=? WHERE id=?').run(model.trim(), q.u.id);
+    db.prepare('UPDATE users SET model=? WHERE id=?').run(normalizeModelName(model), q.u.id);
   }
   if (settings && typeof settings === 'object') {
-    db.prepare('UPDATE users SET settings=? WHERE id=?').run(JSON.stringify(settings).slice(0, 8000), q.u.id);
+    const clean = { ...settings, model: normalizeModelName(settings.model) };
+    db.prepare('UPDATE users SET settings=? WHERE id=?').run(JSON.stringify(clean).slice(0, 8000), q.u.id);
   }
   r.json({ ok: true });
 });
@@ -274,11 +325,16 @@ app.get('/api/chats', auth, (q, r) => {
 });
 
 app.post('/api/chats', auth, (q, r) => {
-  const id = String(q.body.id || ('chat_' + Date.now())).trim();
+  const id = String(q.body.id || 'chat_' + Date.now()).trim();
   const title = String(q.body.title || 'Nouvelle conversation').trim().slice(0, 80);
   const now = Date.now();
-  db.prepare('INSERT OR REPLACE INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)')
-    .run(id, q.u.id, title, now, now);
+  db.prepare('INSERT OR REPLACE INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)').run(
+    id,
+    q.u.id,
+    title,
+    now,
+    now
+  );
   r.json({ ok: true, id, title });
 });
 
@@ -295,75 +351,63 @@ app.delete('/api/chats', auth, (q, r) => {
 });
 
 app.get('/api/chats/:id/messages', auth, (q, r) => {
-  const msgs = db.prepare('SELECT id, role, text, files, ts FROM chat_msgs WHERE chat_id=? AND uid=? ORDER BY ts ASC')
+  const msgs = db
+    .prepare('SELECT id, role, text, files, ts FROM chat_msgs WHERE chat_id=? AND uid=? ORDER BY ts ASC')
     .all(q.params.id, q.u.id);
   const parsed = msgs.map(m => {
     let f = [];
-    try { f = JSON.parse(m.files || '[]'); } catch(e){}
+    try {
+      f = JSON.parse(m.files || '[]');
+    } catch (e) {}
     return { id: m.id, role: m.role, text: m.text, files: f, ts: m.ts };
   });
   r.json(parsed);
 });
 
-// ===== NOVA AI ENGINE =====
+// ===== NOVA ELITE AI SYSTEM PROMPT =====
 
-const NOVA_SYSTEM_PROMPT = `Tu es NOVA, un assistant d'intelligence artificielle d'élite hautement qualifié, professionnel, rigoureux et bienveillant, développé par Med Rayen Bouazizi, CEO of MK.
+const NOVA_SYSTEM_PROMPT = `Tu es NOVA, un assistant d'intelligence artificielle d'élite ultra-puissant, rigoureux, créatif et polyvalent, développé par Med Rayen Bouazizi, CEO of MK.
 Si l'utilisateur te demande qui t'a créé ou développé, réponds toujours clairement que tu as été développé par Med Rayen Bouazizi, CEO of MK.
-Ton champ d'expertise couvre l'analyse stratégique, la rédaction professionnelle, l'ingénierie logicielle, les sciences, la synthèse de documents et la résolution de problèmes complexes.
 
-RÈGLES STRICTES DE LANGUE ET D'ÉCRITURE :
-1. LANGUE FRANÇAISE :
-   - Rédige dans un français impeccable, élégant, riche et sans aucune faute de grammaire, d'accord ou d'orthographe.
-   - Respecte la typographie française (ponctuation soignée, pas d'anglicismes maladroits).
-   - Organise tes réponses de façon limpide : titres clairs (###), listes à puces soignées, paragraphes aérés, mise en valeur des termes clés en gras.
+TES CAPACITÉS DE POINTE :
+1. RÉDACTION & SYNTHÈSE D'EXCELLENCE :
+   - Rédige des réponses approfondies, structurées, précises et directement exploitables : dissertations, rapports professionnels, cours complets, fiches de révision, lettres, CV, programmes informatiques complets, analyses scientifiques, médicales et stratégiques.
+   - Organise tes réponses avec des titres clairs (#, ##, ###), des listes à puces ou numérotées, des citations (>) pour les définitions ou points clés, et des tableaux comparatifs Markdown (| ... | ... |).
 
-2. LANGUE ARABE (اللغة العربية الفصحى) :
-   - Lorsque l'utilisateur s'adresse à toi en arabe ou demande une réponse en arabe, utilise une langue arabe littéraire moderne (الفصحى المعاصرة) d'un niveau d'excellence linguistique irréprochable.
-   - Évite formellement toute faute de grammaire (نحو), de conjugaison (صرف) ou d'orthographe (إملاء، همزات، تاء مربوطة ومفتوحة).
-   - Structure le texte de droite à gauche avec cohérence, en évitant les mélanges désordonnés de signes de ponctuation ou de parenthèses.
+2. EXCELLENCE EN FRANÇAIS, ARABE ET ANGLAIS :
+   - FRANÇAIS : Orthographe, grammaire, accords et typographie irréprochables. Style riche, précis et fluide.
+   - ARABE (اللغة العربية الفصحى المعاصرة) : Maîtrise parfaite de la grammaire (نحو), de la conjugaison (صرف) et de l'orthographe (إملاء، همزات، تاء مربوطة). Structure cohérente de droite à gauche.
+   - ANGLAIS : Anglais académique ou technique naturel et précis.
 
-3. LECTURE & ANALYSE DE PHOTOS ET DOCUMENTS :
-   - Lorsqu'une photo, image ou document PDF est soumis, analyse-le avec une acuité visuelle maximale.
-   - S'il y a du texte dans l'image (manuscrit, imprimé, panneaux, étiquettes, reçus, documents, captures), lis-le attentivement, retranscris-le fidèlement et interprète son contenu.
-   - Décris précisément ce que contient l'image (contexte, personnes, objets, couleurs, graphiques, données chiffrées).
-   - Réponds de manière complète et personnalisée à la requête de l'utilisateur sur cette photo.
+3. DEVOIRS, EXERCICES, MATHÉMATIQUES & QCM :
+   - Quand l'utilisateur soumet un devoir, un exercice ou un examen (en texte, photo ou PDF) :
+     1) Reformule brièvement l'énoncé et identifie les notions clés.
+     2) Donne la résolution complète étape par étape avec formules claires, calculs détaillés, justification rigoureuse et réponse finale encadrée/mise en gras.
+     3) Ajoute des conseils méthodologiques et les pièges classiques à éviter.
+   - Quand on te demande de créer un devoir ou une fiche PDF, structure-le proprement avec en-tête (Matière, Niveau, Durée, Barème), exercices progressifs et corrigé complet séparé.
 
-4. STRUCTURE & PRÉSENTATION :
-   - Évite les pavés de texte monolithiques. Aère systématiquement avec des sous-titres, des listes et des tableaux comparatifs Markdown si utile.
-   - Fournis toujours des explications claires, méthodiques et directement exploitables.`;
+4. ANALYSE VISUELLE & DOCUMENTAIRE (PHOTOS & PDF) :
+   - Lis et retranscris avec une précision maximale tout texte manuscrit ou imprimé, formule mathématique, tableau, graphique ou schéma présent dans les images ou PDF joints.
+   - Ne devine jamais ce qui n'est pas lisible : signale-le honnêtement si une zone est floue.
 
-// ===== SERVICES WEB SEARCH & LIEUX MÉDICAUX (ULTRA-RAPIDES ET NON-BLOQUANTS) =====
+5. URGENCES MÉDICALES & RECHERCHE WEB :
+   - En cas de question médicale ou d'urgence, donne des informations fiables et prudentes, rappelle les numéros d'urgence (15 / 112 en Europe, 190 en Tunisie, 911 aux USA) et exploite les établissements de santé proches fournis dans le contexte.
+   - Lorsque des résultats de recherche Google ou des liens URL sont utilisés, cite les informations vérifiées avec exactitude et sans invention.`;
 
-async function searchLiveWeb(query) {
-  try {
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(1200),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'fr-FR,fr;q=0.9,ar;q=0.8,en;q=0.7'
-      }
-    });
-    if (!res.ok) return [];
-    const html = await res.text();
-    const snippets = (html.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g) || [])
-      .map(x => x.replace(/<[^>]+>/g, '').trim())
-      .filter(Boolean);
-    return snippets.slice(0, 3);
-  } catch (e) {
-    return [];
-  }
-}
+// ===== LIEUX MÉDICAUX À PROXIMITÉ =====
 
-async function findNearbyPlaces(lat, lon, query = 'hospital') {
+async function findNearbyPlaces(lat, lon, query = 'hospital clinic pharmacy') {
   try {
     let url;
     if (lat && lon) {
-      url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&lat=${lat}&lon=${lon}&limit=4`;
+      url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&viewbox=${lon - 0.15},${lat + 0.15},${lon + 0.15},${lat - 0.15}&bounded=1&limit=4`;
     } else {
       url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=4`;
     }
-    const res = await fetch(url, { signal: AbortSignal.timeout(1400), headers: { 'User-Agent': 'NOVA-MK-Assistant/2.0' } });
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(2200),
+      headers: { 'User-Agent': 'NOVA-MK-Assistant/3.0' }
+    });
     if (!res.ok) return [];
     const data = await res.json();
     return (Array.isArray(data) ? data : []).slice(0, 4).map(item => ({
@@ -378,7 +422,112 @@ async function findNearbyPlaces(lat, lon, query = 'hospital') {
   }
 }
 
-// ===== GÉNÉRATEUR D'IMAGES EN HAUTE QUALITÉ =====
+// ===== HELPERS ERREURS GEMINI & EXTRACTION SOURCES =====
+
+function formatGeminiError(err) {
+  const msg = String(err?.message || err || 'Erreur inconnue');
+  if (msg.includes('PERMISSION_DENIED') || msg.includes('API_KEY_INVALID') || msg.includes('403') || msg.includes('400')) {
+    return 'Clé API Gemini invalide ou non configurée. Vérifiez la configuration dans Settings > Secrets.';
+  }
+  if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429')) {
+    return 'Limite de requêtes atteinte temporairement. Patientez quelques secondes ou passez en mode Rapide.';
+  }
+  if (msg.includes('NOT_FOUND') || msg.includes('404')) {
+    return 'Modèle IA indisponible. Réessayez avec le moteur NOVA Hydrogen.';
+  }
+  if (msg.includes('timeout') || msg.includes('Délai')) {
+    return 'Le traitement a pris plus de temps que prévu. Réessayez ou simplifiez la demande.';
+  }
+  return msg;
+}
+
+function extractGroundingSources(response) {
+  const chunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  if (!Array.isArray(chunks)) return [];
+  const seen = new Set();
+  const sources = [];
+  for (const c of chunks) {
+    if (c?.web?.uri && !seen.has(c.web.uri)) {
+      seen.add(c.web.uri);
+      sources.push({
+        title: c.web.title || c.web.uri,
+        uri: c.web.uri
+      });
+    }
+  }
+  return sources.slice(0, 6);
+}
+
+function resolveThinkingLevel(powerMode, modelName) {
+  if (modelName === 'gemini-3.1-flash-lite') return ThinkingLevel.MINIMAL;
+  switch (powerMode) {
+    case 'fast':
+      return ThinkingLevel.LOW;
+    case 'balanced':
+      return ThinkingLevel.MEDIUM;
+    case 'max':
+      return ThinkingLevel.XHIGH;
+    default:
+      return ThinkingLevel.HIGH;
+  }
+}
+
+function buildGeminiConfig(modelName, systemInstruction, { powerMode, useSearch, urlsInPrompt, responseSchema } = {}) {
+  const config = {
+    systemInstruction
+  };
+
+  if (modelName === 'gemini-4-hydrogen') {
+    config.thinkingConfig = {
+      thinkingLevel: resolveThinkingLevel(powerMode, modelName)
+    };
+  } else if (modelName === 'gemini-3.1-flash-lite') {
+    config.thinkingConfig = {
+      thinkingLevel: ThinkingLevel.MINIMAL
+    };
+  }
+
+  if (responseSchema) {
+    config.responseMimeType = 'application/json';
+    config.responseSchema = responseSchema;
+  } else if (urlsInPrompt && urlsInPrompt.length > 0 && !useSearch) {
+    config.tools = [{ urlContext: {} }];
+  } else if (useSearch) {
+    config.tools = [{ googleSearch: {} }];
+  }
+
+  return config;
+}
+
+async function generateWithRetry(ai, params, timeoutMs = 85000) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Délai dépassé (${Math.round(timeoutMs / 1000)}s)`)), timeoutMs)
+      );
+      const response = await Promise.race([ai.models.generateContent(params), timeoutPromise]);
+      return response;
+    } catch (err) {
+      lastErr = err;
+      const msg = String(err?.message || '');
+      const isTransient =
+        msg.includes('503') ||
+        msg.includes('high demand') ||
+        msg.includes('ECONNRESET') ||
+        msg.includes('ETIMEDOUT');
+      if (attempt < 2 && isTransient) {
+        await new Promise(r => setTimeout(r, 800 * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+// ===== GÉNÉRATEUR D'ILLUSTRATIONS VECTORIELLES HD (FREE TIER + EXPORT PNG 2K) =====
+
 async function generateHighQualityImage(prompt, aspectRatio = '1:1') {
   const ai = getAiClient();
   if (!ai) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
@@ -387,100 +536,57 @@ async function generateHighQualityImage(prompt, aspectRatio = '1:1') {
   const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
   const ar = validRatios.includes(aspectRatio) ? aspectRatio : '1:1';
 
-  // Tentative 1 : gemini-3.1-flash-lite-image
-  try {
-    const res = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-image',
-      contents: {
-        parts: [{ text: cleanPrompt }]
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: ar
-        }
-      }
-    });
-    for (const part of res.candidates?.[0]?.content?.parts ?? []) {
-      if (part.inlineData?.data) {
-        const mime = part.inlineData.mimeType || 'image/png';
-        return `data:${mime};base64,${part.inlineData.data}`;
-      }
-    }
-  } catch (err) {
-    console.warn('gemini-3.1-flash-lite-image:', err.message?.slice(0, 80));
-  }
-
-  // Tentative 2 : gemini-nano-banana-2.1
-  try {
-    const res = await ai.models.generateContent({
-      model: 'gemini-nano-banana-2.1',
-      contents: {
-        parts: [{ text: cleanPrompt }]
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: ar
-        }
-      }
-    });
-    for (const part of res.candidates?.[0]?.content?.parts ?? []) {
-      if (part.inlineData?.data) {
-        const mime = part.inlineData.mimeType || 'image/png';
-        return `data:${mime};base64,${part.inlineData.data}`;
-      }
-    }
-  } catch (err) {
-    console.warn('gemini-nano-banana-2.1:', err.message?.slice(0, 80));
-  }
-
-  // Tentative 3 : Génération vectorielle haute fidélité (SVG Ultra HD 1024x1024) avec IA
-  try {
-    let width = 1000;
-    let height = 1000;
-    if (ar === '16:9') { width = 1280; height = 720; }
-    else if (ar === '9:16') { width = 720; height = 1280; }
-    else if (ar === '4:3') { width = 1024; height = 768; }
-    else if (ar === '3:4') { width = 768; height = 1024; }
-
-    const svgPrompt = `Tu es un artiste numérique d'élite et maître du design vectoriel SVG moderne.
-Crée une œuvre d'art SVG autonome, époustouflante, détaillée, ultra-professionnelle et esthétique représentant : "${cleanPrompt}".
-Règles strictes :
-1. Dimensions : viewBox="0 0 ${width} ${height}" width="100%" height="100%".
-2. Utilise des dégradés sophistiqués (<linearGradient>, <radialGradient>), des filtres d'ombre/glow (<filter>), des formes détaillées (<path>, <polygon>, <rect>, <circle>).
-3. Palette de couleurs luxueuse, cinématographique ou néon selon le sujet.
-4. Réponds STRICTEMENT et UNIQUEMENT avec le code SVG commençant par <svg and finissant par </svg>, sans aucun texte d'introduction, sans balises markdown de code.`;
-
-    const svgRes = await Promise.race([
-      ai.models.generateContent({
-        model: 'gemini-flash-lite-latest',
-        contents: svgPrompt
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('SVG timeout')), 6500))
-    ]);
-
-    let svgText = svgRes.text || '';
-    if (svgText.includes('<svg') && svgText.includes('</svg>')) {
-      const match = svgText.match(/<svg[\s\S]*?<\/svg>/i);
-      if (match) {
-        const cleanSvg = match[0];
-        const b64 = Buffer.from(cleanSvg, 'utf8').toString('base64');
-        return `data:image/svg+xml;base64,${b64}`;
-      }
-    }
-  } catch (err) {
-    console.warn('Vector SVG gen:', err.message?.slice(0, 80));
-  }
-
-  // Tentative 4 : Carte graphique vectorielle stylisée générée procéduralement
-  let width = 1000, height = 1000;
+  let width = 1024;
+  let height = 1024;
   if (ar === '16:9') { width = 1280; height = 720; }
   else if (ar === '9:16') { width = 720; height = 1280; }
-  const safeTitle = cleanPrompt.slice(0, 60).replace(/[<>&"']/g, '');
-  const proceduralSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">
+  else if (ar === '4:3') { width = 1024; height = 768; }
+  else if (ar === '3:4') { width = 768; height = 1024; }
+
+  const svgPrompt = `Tu es un directeur artistique et illustrateur vectoriel SVG d'élite mondiale.
+Crée une illustration SVG autonome époustouflante, riche, très détaillée et esthétique représentant : "${cleanPrompt}".
+
+RÈGLES TECHNIQUES STRICTES :
+1. Balise racine exacte : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"> ... </svg>
+2. Utilise des dégradés riches (<linearGradient>, <radialGradient>), des filtres lumineux ou d'ombre (<filter> avec feGaussianBlur / feDropShadow), de nombreuses formes composées (<path>, <circle>, <ellipse>, <polygon>, <rect>) en couches successives (arrière-plan atmosphérique, plan intermédiaire, sujet principal très détaillé, reflets et particules lumineuses).
+3. Sois fidèle au sujet demandé (personnages, animaux, paysages, objets scientifiques, schémas, architecture, scène futuriste, etc.) avec de vraies proportions artistiques, des ombres et lumières cohérentes.
+4. N'ajoute PAS de texte parasite ou de filigrane sauf si la description demande explicitement du texte.
+5. Réponds STRICTEMENT et UNIQUEMENT avec le code SVG brut commençant par <svg et finissant par </svg>, sans balises markdown \`\`\` et sans explication.`;
+
+  try {
+    const svgRes = await generateWithRetry(
+      ai,
+      {
+        model: DEFAULT_MODEL,
+        contents: svgPrompt,
+        config: {
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM }
+        }
+      },
+      45000
+    );
+
+    const svgText = svgRes.text || '';
+    const match = svgText.match(/<svg[\s\S]*?<\/svg>/i);
+    if (match) {
+      let cleanSvg = match[0];
+      if (!cleanSvg.includes('xmlns=')) {
+        cleanSvg = cleanSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      const b64 = Buffer.from(cleanSvg, 'utf8').toString('base64');
+      return `data:image/svg+xml;base64,${b64}`;
+    }
+  } catch (err) {
+    console.warn('SVG image gen fallback:', err.message);
+  }
+
+  // Fallback graphique vectoriel stylisé si échec
+  const safeTitle = cleanPrompt.slice(0, 56).replace(/[<>&"']/g, '');
+  const proceduralSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0a0f1d"/>
-        <stop offset="50%" stop-color="#141c30"/>
+        <stop offset="0%" stop-color="#070b16"/>
+        <stop offset="50%" stop-color="#111a2e"/>
         <stop offset="100%" stop-color="#05070c"/>
       </linearGradient>
       <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -488,72 +594,204 @@ Règles strictes :
         <stop offset="50%" stop-color="#8b5cf6"/>
         <stop offset="100%" stop-color="#06b6d4"/>
       </linearGradient>
-      <radialGradient id="halo" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
-        <stop offset="100%" stop-color="#0a0f1d" stop-opacity="0"/>
+      <radialGradient id="halo" cx="50%" cy="45%" r="50%">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.38"/>
+        <stop offset="100%" stop-color="#070b16" stop-opacity="0"/>
       </radialGradient>
-      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.6"/>
-      </filter>
     </defs>
     <rect width="${width}" height="${height}" fill="url(#bg)"/>
-    <circle cx="${width/2}" cy="${height/2}" r="${Math.min(width,height)*0.4}" fill="url(#halo)"/>
-    <g filter="url(#shadow)">
-      <rect x="${width*0.1}" y="${height*0.15}" width="${width*0.8}" height="${height*0.7}" rx="32" fill="#0d1424" stroke="url(#glow)" stroke-width="2.5" fill-opacity="0.85"/>
-      <circle cx="${width/2}" cy="${height*0.42}" r="80" fill="url(#glow)" fill-opacity="0.15" stroke="url(#glow)" stroke-width="2"/>
-      <path d="M${width/2 - 32} ${height*0.42} L${width/2 + 32} ${height*0.42} M${width/2} ${height*0.42 - 32} L${width/2} ${height*0.42 + 32}" stroke="#60a5fa" stroke-width="3" stroke-linecap="round"/>
-      <text x="${width/2}" y="${height*0.62}" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">${safeTitle}</text>
-      <text x="${width/2}" y="${height*0.68}" font-family="system-ui, sans-serif" font-size="16" font-weight="500" fill="#94a3b8" text-anchor="middle">NOVA MK · Studio Image Haute Résolution · Med Rayen Bouazizi</text>
-    </g>
+    <circle cx="${width / 2}" cy="${height * 0.45}" r="${Math.min(width, height) * 0.42}" fill="url(#halo)"/>
+    <rect x="${width * 0.1}" y="${height * 0.14}" width="${width * 0.8}" height="${height * 0.72}" rx="28" fill="#0d1424" stroke="url(#glow)" stroke-width="2.5" fill-opacity="0.88"/>
+    <circle cx="${width / 2}" cy="${height * 0.42}" r="72" fill="url(#glow)" fill-opacity="0.18" stroke="url(#glow)" stroke-width="2.5"/>
+    <polygon points="${width / 2},${height * 0.42 - 36} ${width / 2 + 34},${height * 0.42 + 24} ${width / 2 - 34},${height * 0.42 + 24}" fill="none" stroke="#60a5fa" stroke-width="3"/>
+    <text x="${width / 2}" y="${height * 0.63}" font-family="system-ui, sans-serif" font-size="26" font-weight="700" fill="#f8fafc" text-anchor="middle">${safeTitle}</text>
+    <text x="${width / 2}" y="${height * 0.70}" font-family="system-ui, sans-serif" font-size="15" font-weight="500" fill="#94a3b8" text-anchor="middle">NOVA MK · Studio Créatif</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(proceduralSvg, 'utf8').toString('base64')}`;
 }
 
-async function callGeminiGenerate(modelName, systemPrompt, contents, temp, maxTokens) {
-  const ai = getAiClient();
-  if (!ai) throw new Error('GEMINI_API_KEY manquant sur le serveur.');
+// ===== GÉNÉRATEUR DE QCM STRUCTURÉ (JSON SCHEMA) =====
 
-  const config = {
-    systemInstruction: systemPrompt
-  };
-  if (temp !== undefined && !modelName.startsWith('gemini-3.8') && !modelName.startsWith('gemini-4')) {
-    config.temperature = temp;
-  }
-  if (maxTokens) {
-    config.maxOutputTokens = maxTokens;
-  }
-
-  // Retry avec backoff sur saturation transitoire (503 / High Demand)
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Délai dépassé (timeout) pour le modèle ${modelName}`)), 18000)
-      );
-
-      const genPromise = ai.models.generateContent({
-        model: modelName,
-        contents,
-        config
-      });
-
-      const response = await Promise.race([genPromise, timeoutPromise]);
-      const text = response.text;
-      if (!text) {
-        throw new Error('Réponse vide du modèle IA.');
+const QCM_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING, description: 'Titre clair du QCM' },
+    subject: { type: Type.STRING, description: 'Matière ou domaine' },
+    level: { type: Type.STRING, description: 'Niveau scolaire ou expertise' },
+    durationMinutes: { type: Type.INTEGER, description: 'Durée conseillée en minutes' },
+    questions: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          question: { type: Type.STRING, description: 'Énoncé clair et précis de la question' },
+          options: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'Exactement 4 propositions de réponse (A, B, C, D sans préfixe lettre)'
+          },
+          correctIndex: {
+            type: Type.INTEGER,
+            description: 'Index de la bonne réponse entre 0 et 3'
+          },
+          explanation: {
+            type: Type.STRING,
+            description: 'Explication pédagogique détaillée justifiant la bonne réponse'
+          }
+        },
+        required: ['question', 'options', 'correctIndex', 'explanation']
       }
-      return text;
-    } catch (err) {
-      const isTransient = err.message?.includes('503') || err.message?.includes('high demand') || err.message?.includes('timeout') || err.message?.includes('RESOURCE_EXHAUSTED');
-      if (attempt < 2 && isTransient) {
-        await new Promise(r => setTimeout(r, 600));
-        continue;
-      }
-      throw err;
     }
+  },
+  required: ['title', 'subject', 'level', 'durationMinutes', 'questions']
+};
+
+function buildFileParts(files = []) {
+  const parts = [];
+  for (const f of files.slice(0, 6)) {
+    if (!f?.data) continue;
+    let rawData = String(f.data);
+    if (rawData.includes(';base64,')) {
+      rawData = rawData.split(';base64,')[1];
+    }
+    rawData = rawData.trim();
+    if (!rawData) continue;
+    const mimeType =
+      f.type === 'application/pdf'
+        ? 'application/pdf'
+        : /^image\/(png|gif|webp|svg\+xml)$/.test(f.type)
+          ? f.type
+          : 'image/jpeg';
+    parts.push({ inlineData: { mimeType, data: rawData } });
   }
+  return parts;
 }
 
-// Endpoint de transcription audio (Web Speech fallback pour Smart Watch et Mobile)
+function formatQcmMarkdown(qcm) {
+  let md = `## 📝 ${qcm.title}\n\n`;
+  md += `**Matière :** ${qcm.subject} · **Niveau :** ${qcm.level} · **Durée estimée :** ${qcm.durationMinutes} min · **Questions :** ${qcm.questions.length}\n\n---\n\n`;
+  const letters = ['A', 'B', 'C', 'D'];
+  qcm.questions.forEach((item, idx) => {
+    md += `### Question ${idx + 1}\n${item.question}\n`;
+    (item.options || []).forEach((opt, oi) => {
+      md += `- **${letters[oi] || oi + 1}.** ${opt}\n`;
+    });
+    md += `\n`;
+  });
+  return md;
+}
+
+async function generateStructuredQcm(ai, { topic, subject, level, count = 8, language = 'Français', files = [] }) {
+  const numQuestions = Math.max(3, Math.min(25, parseInt(count, 10) || 8));
+  const prompt = `Génère un QCM pédagogique complet, rigoureux et stimulant de ${numQuestions} questions en ${language}.
+Sujet / Consigne : ${topic || 'Basé sur les documents joints'}
+Matière : ${subject || 'Générale'}
+Niveau : ${level || 'Lycée / Université'}
+
+Règles strictes :
+- Chaque question doit avoir EXACTEMENT 4 options plausibles et distinctes (ne mets pas "A.", "B." dans le texte des options).
+- Une seule réponse correcte (correctIndex de 0 à 3).
+- Fournis une explication pédagogique claire et complète pour chaque question.
+- Si des fichiers (image ou PDF de cours) sont joints, base les questions directement sur leur contenu.`;
+
+  const parts = [...buildFileParts(files), { text: prompt }];
+
+  const resp = await generateWithRetry(
+    ai,
+    {
+      model: DEFAULT_MODEL,
+      contents: [{ role: 'user', parts }],
+      config: {
+        systemInstruction: NOVA_SYSTEM_PROMPT,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+        responseMimeType: 'application/json',
+        responseSchema: QCM_RESPONSE_SCHEMA
+      }
+    },
+    85000
+  );
+
+  const rawJson = (resp.text || '{}').trim();
+  const qcm = JSON.parse(rawJson);
+  if (!Array.isArray(qcm.questions) || !qcm.questions.length) {
+    throw new Error('Le QCM généré ne contient aucune question.');
+  }
+  qcm.questions = qcm.questions.map(q => ({
+    question: String(q.question || ''),
+    options: Array.isArray(q.options) ? q.options.slice(0, 4).map(String) : ['Option A', 'Option B', 'Option C', 'Option D'],
+    correctIndex: Math.max(0, Math.min(3, parseInt(q.correctIndex, 10) || 0)),
+    explanation: String(q.explanation || '')
+  }));
+  return qcm;
+}
+
+// ===== HELPERS LANGUE & RÉSUMÉ VOCAL =====
+
+function detectLanguage(text) {
+  const arMatches = (text.match(/[\u0600-\u06FF]/g) || []).length;
+  const latMatches = (text.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
+  if (arMatches > latMatches * 0.5 && arMatches > 8) return 'ar';
+  const isEn =
+    /\b(the|is|and|you|this|with|for|that|have)\b/i.test(text) &&
+    !/\b(le|la|les|est|vous|pour|avec|dans|une)\b/i.test(text);
+  return isEn ? 'en' : 'fr';
+}
+
+function buildSpeechSummary(outputText) {
+  const cleanOutput = (outputText || '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '')
+    .replace(/[#*`_>|!\[\]\(\)]/g, '')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const firstSentenceMatch = cleanOutput.match(/^(.*?[.!?](\s|$))/);
+  let summary = firstSentenceMatch ? firstSentenceMatch[0].trim() : cleanOutput.slice(0, 160);
+  if (summary.length < 25 && cleanOutput.length > 25) {
+    summary = cleanOutput.slice(0, 160);
+  }
+  return summary;
+}
+
+function loadChatHistoryContents(chatId, uid) {
+  const historyRows = db
+    .prepare('SELECT role, text FROM chat_msgs WHERE chat_id=? AND uid=? ORDER BY ts ASC LIMIT 20')
+    .all(chatId, uid);
+
+  const contents = [];
+  for (const row of historyRows) {
+    if (!row.text) continue;
+    // Strip inline base64 data URIs from history so context stays light and fast
+    const cleanedText = row.text.replace(/!\[([^\]]*)\]\(data:image\/[^\)]+\)/g, '[Image générée: $1]').trim();
+    if (!cleanedText) continue;
+    contents.push({
+      role: row.role === 'user' ? 'user' : 'model',
+      parts: [{ text: cleanedText }]
+    });
+  }
+  return contents;
+}
+
+function ensureChatExists(chatId, uid, titleSeed) {
+  const now = Date.now();
+  let currentChatId = chatId;
+  const chat = chatId ? db.prepare('SELECT * FROM chats WHERE id=? AND uid=?').get(chatId, uid) : null;
+  if (!chat) {
+    currentChatId = 'chat_' + now;
+    const initialTitle = titleSeed ? titleSeed.slice(0, 36) + (titleSeed.length > 36 ? '…' : '') : 'Nouvelle conversation';
+    db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)').run(
+      currentChatId,
+      uid,
+      initialTitle,
+      now,
+      now
+    );
+  }
+  return currentChatId;
+}
+
+// ===== TRANSCRIPTION AUDIO =====
+
 app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
   try {
     const audioData = q.body.audio;
@@ -561,26 +799,28 @@ app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
     if (!audioData) return r.status(400).json({ error: 'Fichier audio manquant.' });
 
     let rawData = String(audioData);
-    if (rawData.includes(';base64,')) {
-      rawData = rawData.split(';base64,')[1];
-    }
+    if (rawData.includes(';base64,')) rawData = rawData.split(';base64,')[1];
     rawData = rawData.trim();
 
     const ai = getAiClient();
     if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant sur le serveur.' });
 
     let transcript = '';
-    const transcribeModels = ['gemini-3.5-transcribe', 'gemini-flash-lite-latest', 'gemini-3-flash-preview', 'gemini-flash-latest'];
+    const transcribeModels = ['gemini-3.5-transcribe', DEFAULT_MODEL, 'gemini-3.1-flash-lite'];
     for (const m of transcribeModels) {
       try {
         const resp = await ai.models.generateContent({
           model: m,
-          contents: [{
-            parts: [
-              { inlineData: { mimeType, data: rawData } },
-              { text: "Tu es un transcripteur vocal expert multilingue (français, arabe, anglais). Retranscris avec une précision irréprochable les propos enregistrés. Ne retourne strictement QUE le texte exact prononcé, sans aucune ponctuation inutile, sans guillemets et sans commentaire." }
-            ]
-          }]
+          contents: [
+            {
+              parts: [
+                { inlineData: { mimeType, data: rawData } },
+                {
+                  text: 'Tu es un transcripteur vocal expert multilingue (français, arabe, anglais). Retranscris avec une précision irréprochable les propos enregistrés. Ne retourne strictement QUE le texte exact prononcé, sans commentaire.'
+                }
+              ]
+            }
+          ]
         });
         transcript = resp.text?.trim() || '';
         if (transcript) break;
@@ -595,7 +835,8 @@ app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
   }
 });
 
-// Endpoint dédié à la génération d'images en haute qualité
+// ===== ENDPOINT GÉNÉRATION D'IMAGES =====
+
 app.post('/api/generate-image', auth, limit(30, 6e4), async (q, r) => {
   try {
     const prompt = String(q.body.prompt || '').trim();
@@ -608,19 +849,21 @@ app.post('/api/generate-image', auth, limit(30, 6e4), async (q, r) => {
 
     const imageUrl = await generateHighQualityImage(prompt, aspectRatio);
     const now = Date.now();
-    let currentChatId = chatId;
-
-    if (!currentChatId) {
-      currentChatId = 'chat_' + now;
-      db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)')
-        .run(currentChatId, q.u.id, 'Image HD : ' + prompt.slice(0, 24), now, now);
-    }
+    const currentChatId = ensureChatExists(chatId, q.u.id, 'Image : ' + prompt.slice(0, 24));
 
     const botMsgId = 'msg_' + now + '_img';
-    const textDesc = `Voici votre création visuelle générée en haute définition par NOVA :\n\n**« ${prompt} »**\n\n![${prompt}](${imageUrl})`;
+    const textDesc = `Voici votre création visuelle générée par NOVA :\n\n**« ${prompt} »**\n\n![${prompt}](${imageUrl})`;
 
-    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
-      .run(botMsgId, currentChatId, q.u.id, 'bot', textDesc, JSON.stringify([{ name: 'nova_hd_image.png', type: 'image/png', url: imageUrl }]), now);
+    // Store empty files array so image isn't rendered twice (already inside markdown)
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      botMsgId,
+      currentChatId,
+      q.u.id,
+      'bot',
+      textDesc,
+      '[]',
+      now
+    );
     db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now, currentChatId);
 
     return r.json({
@@ -628,172 +871,688 @@ app.post('/api/generate-image', auth, limit(30, 6e4), async (q, r) => {
       imageUrl,
       prompt,
       text: textDesc,
-      speechSummary: `Image haute définition générée pour : ${prompt.slice(0, 60)}`,
+      speechSummary: `Illustration générée pour : ${prompt.slice(0, 60)}`,
       chatId: currentChatId,
       botMsgId
     });
   } catch (e) {
     console.error('API generate-image error:', e);
-    return r.status(500).json({ error: e.message || 'Erreur lors de la création de l’image HD.' });
+    return r.status(500).json({ error: formatGeminiError(e) });
   }
 });
 
+// ===== ENDPOINT GÉNÉRATION DE QCM INTERACTIF =====
+
+app.post('/api/generate-qcm', auth, limit(30, 6e4), async (q, r) => {
+  const startTime = Date.now();
+  try {
+    const { topic, subject, level, count, language, files = [], chatId } = q.body;
+    if (!topic && !files.length) {
+      return r.status(400).json({ error: 'Veuillez préciser un sujet ou joindre un document.' });
+    }
+    const ai = getAiClient();
+    if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant sur le serveur.' });
+
+    const qcm = await generateStructuredQcm(ai, { topic, subject, level, count, language, files });
+    const now = Date.now();
+    const currentChatId = ensureChatExists(chatId, q.u.id, 'QCM : ' + (qcm.title || topic || 'Quiz'));
+
+    const userMsgId = 'msg_' + now + '_u';
+    const botMsgId = 'msg_' + (now + 1) + '_b';
+    const userPromptText = `📝 **Créer un QCM** : ${topic || 'D’après document'} (${subject || 'Général'} · ${level || 'Standard'} · ${qcm.questions.length} questions)`;
+    const botMarkdown = formatQcmMarkdown(qcm);
+    const metaFiles = [{ type: 'nova/qcm', name: qcm.title, qcm }];
+
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      userMsgId,
+      currentChatId,
+      q.u.id,
+      'user',
+      userPromptText,
+      JSON.stringify(files.map(f => ({ name: f.name, type: f.type, url: f.url }))),
+      now
+    );
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      botMsgId,
+      currentChatId,
+      q.u.id,
+      'bot',
+      botMarkdown,
+      JSON.stringify(metaFiles),
+      now + 1
+    );
+    db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now + 1, currentChatId);
+
+    return r.json({
+      ok: true,
+      qcm,
+      text: botMarkdown,
+      files: metaFiles,
+      chatId: currentChatId,
+      userMsgId,
+      botMsgId,
+      durationMs: Date.now() - startTime,
+      modelUsed: DEFAULT_MODEL
+    });
+  } catch (e) {
+    console.error('API generate-qcm error:', e);
+    return r.status(500).json({ error: formatGeminiError(e) });
+  }
+});
+
+// ===== ENDPOINT DEVOIRS & EXERCICES =====
+
+app.post('/api/generate-devoir', auth, limit(30, 6e4), async (q, r) => {
+  const startTime = Date.now();
+  try {
+    const {
+      subject = 'Mathématiques',
+      level = 'Lycée / Terminale',
+      topic = '',
+      mode = 'create',
+      language = 'Français',
+      files = [],
+      chatId
+    } = q.body;
+
+    if (!topic && !files.length) {
+      return r.status(400).json({ error: 'Veuillez décrire le devoir/exercice ou joindre une photo/PDF.' });
+    }
+    const ai = getAiClient();
+    if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant sur le serveur.' });
+
+    const taskPrompt =
+      mode === 'solve'
+        ? `MODE RÉSOLUTION EXPERTE DE DEVOIR (${language}) :
+Matière : ${subject} | Niveau : ${level}
+Consigne / Énoncé : ${topic || 'Analyser et résoudre intégralement le devoir dans les fichiers joints.'}
+
+Fournis une correction magistrale structurée :
+### 1. Analyse de l'énoncé & Rappels de cours
+### 2. Résolution détaillée étape par étape (avec calculs, formules et justification complète)
+### 3. Réponse finale rédigée (prête à recopier)
+### 4. Conseils & Pièges à éviter`
+        : `MODE CRÉATION DE DEVOIR COMPLET (${language}) :
+Matière : ${subject} | Niveau : ${level} | Thème : ${topic || 'Basé sur les documents joints'}
+
+Crée un devoir sur table officiel, complet et rigoureux prêt à imprimer en PDF :
+# Devoir de ${subject} — ${topic || 'Évaluation'}
+**Niveau :** ${level} · **Durée conseillée :** 1h30 · **Barème total :** 20 points
+
+Organise le devoir en 3 à 4 exercices progressifs (du cours vers l'approfondissement/problème) avec le barème exact de chaque question.
+Puis ajoute une grande section séparée à la fin :
+---
+## ✅ Corrigé Détaillé & Barème de Correction
+Avec la solution complète, rigoureuse et pédagogique de chaque question.`;
+
+    const parts = [...buildFileParts(files), { text: taskPrompt }];
+    const resp = await generateWithRetry(
+      ai,
+      {
+        model: DEFAULT_MODEL,
+        contents: [{ role: 'user', parts }],
+        config: buildGeminiConfig(DEFAULT_MODEL, NOVA_SYSTEM_PROMPT, { powerMode: 'max' })
+      },
+      95000
+    );
+
+    const outputText = resp.text;
+    if (!outputText) throw new Error('Réponse vide du modèle IA.');
+
+    const now = Date.now();
+    const currentChatId = ensureChatExists(chatId, q.u.id, `Devoir : ${subject} - ${(topic || 'Exercice').slice(0, 20)}`);
+    const userMsgId = 'msg_' + now + '_u';
+    const botMsgId = 'msg_' + (now + 1) + '_b';
+    const userLabel =
+      mode === 'solve'
+        ? `📚 **Résoudre mon devoir** (${subject} · ${level}) : ${topic || 'Fichier joint'}`
+        : `📚 **Créer un devoir** (${subject} · ${level}) : ${topic || 'D’après document'}`;
+    const metaFiles = [{ type: 'nova/meta', isPdfReady: true }];
+
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      userMsgId,
+      currentChatId,
+      q.u.id,
+      'user',
+      userLabel,
+      JSON.stringify(files.map(f => ({ name: f.name, type: f.type, url: f.url }))),
+      now
+    );
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      botMsgId,
+      currentChatId,
+      q.u.id,
+      'bot',
+      outputText,
+      JSON.stringify(metaFiles),
+      now + 1
+    );
+    db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now + 1, currentChatId);
+
+    return r.json({
+      ok: true,
+      text: outputText,
+      files: metaFiles,
+      isPdfReady: true,
+      detectedLang: detectLanguage(outputText),
+      speechSummary: buildSpeechSummary(outputText),
+      chatId: currentChatId,
+      userMsgId,
+      botMsgId,
+      durationMs: Date.now() - startTime,
+      modelUsed: DEFAULT_MODEL
+    });
+  } catch (e) {
+    console.error('API generate-devoir error:', e);
+    return r.status(500).json({ error: formatGeminiError(e) });
+  }
+});
+
+// ===== ENDPOINT CRÉATION DE DOCUMENTS PDF =====
+
+app.post('/api/generate-document', auth, limit(30, 6e4), async (q, r) => {
+  const startTime = Date.now();
+  try {
+    const {
+      docType = 'Cours & Fiche de synthèse',
+      title = '',
+      instructions = '',
+      language = 'Français',
+      files = [],
+      chatId
+    } = q.body;
+
+    if (!title && !instructions && !files.length) {
+      return r.status(400).json({ error: 'Veuillez renseigner un titre ou des instructions pour votre document.' });
+    }
+    const ai = getAiClient();
+    if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant sur le serveur.' });
+
+    const docPrompt = `Génère un document complet de très haute qualité prêt pour exportation en PDF professionnel A4.
+Type de document : ${docType}
+Titre : ${title || 'Document professionnel'}
+Langue de rédaction : ${language}
+Instructions & Contenu demandé : ${instructions || 'Synthèse complète et structurée des documents joints.'}
+
+Exigences de mise en page Markdown :
+- Commence par un titre principal (# Titre) suivi d'un court chapeau / résumé exécutif en citation (> ...).
+- Structure le document en sections claires (##, ###), paragraphes riches, listes à puces et au moins un tableau récapitulatif Markdown si pertinent.
+- Sois complet, rigoureux, concret et sans remplissage inutile.`;
+
+    const parts = [...buildFileParts(files), { text: docPrompt }];
+    const resp = await generateWithRetry(
+      ai,
+      {
+        model: DEFAULT_MODEL,
+        contents: [{ role: 'user', parts }],
+        config: buildGeminiConfig(DEFAULT_MODEL, NOVA_SYSTEM_PROMPT, { powerMode: 'high' })
+      },
+      90000
+    );
+
+    const outputText = resp.text;
+    if (!outputText) throw new Error('Réponse vide du modèle IA.');
+
+    const now = Date.now();
+    const currentChatId = ensureChatExists(chatId, q.u.id, `PDF : ${(title || docType).slice(0, 26)}`);
+    const userMsgId = 'msg_' + now + '_u';
+    const botMsgId = 'msg_' + (now + 1) + '_b';
+    const userLabel = `📄 **Créer un document PDF** (${docType}) : ${title || instructions.slice(0, 60)}`;
+    const metaFiles = [{ type: 'nova/meta', isPdfReady: true, docTitle: title || docType }];
+
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      userMsgId,
+      currentChatId,
+      q.u.id,
+      'user',
+      userLabel,
+      JSON.stringify(files.map(f => ({ name: f.name, type: f.type, url: f.url }))),
+      now
+    );
+    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+      botMsgId,
+      currentChatId,
+      q.u.id,
+      'bot',
+      outputText,
+      JSON.stringify(metaFiles),
+      now + 1
+    );
+    db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now + 1, currentChatId);
+
+    return r.json({
+      ok: true,
+      text: outputText,
+      files: metaFiles,
+      isPdfReady: true,
+      docTitle: title || docType,
+      detectedLang: detectLanguage(outputText),
+      speechSummary: buildSpeechSummary(outputText),
+      chatId: currentChatId,
+      userMsgId,
+      botMsgId,
+      durationMs: Date.now() - startTime,
+      modelUsed: DEFAULT_MODEL
+    });
+  } catch (e) {
+    console.error('API generate-document error:', e);
+    return r.status(500).json({ error: formatGeminiError(e) });
+  }
+});
+
+// ===== CHAT PRINCIPAL (AVEC STREAMING SSE + FALLBACK CLASSIQUE) =====
+
+async function prepareChatContext(q) {
+  const text = String(q.body.text || '').trim();
+  const files = Array.isArray(q.body.files) ? q.body.files.slice(0, 6) : [];
+  const chatId = String(q.body.chatId || '').trim();
+  const requestedModel = normalizeModelName(q.body.model || q.u.model || DEFAULT_MODEL);
+  const powerMode = String(q.body.powerMode || 'max');
+  const userLoc = q.body.location;
+  const isExplicitWebSearch = q.body.webSearch !== false;
+
+  const currentChatId = ensureChatExists(chatId, q.u.id, text || 'Analyse document');
+
+  const lowerText = text.toLowerCase();
+  const needsMedical =
+    /hopital|hôpital|clinique|cabinet|urgence|médical|médecin|docteur|douleur|blessure|malade|santé|pharmacie|hospital|clinic|doctor|emergency|مستشفى|طبيب|عيادة|طوارئ|صيدلية|ألم|مرض|إسعاف/.test(
+      lowerText
+    );
+  const needsSearch =
+    isExplicitWebSearch &&
+    /actualit|nouvelle|météo|weather|news|recherche|cherche|internet|web|derni[èe]re|aujourd'hui|2025|2026|prix|cours|résultat|score|أخبار|طقس|بحث|ابحث/.test(
+      lowerText
+    );
+  const urlsInPrompt = text.match(/https?:\/\/[^\s<>"']+/g) || [];
+
+  let nearbyPlaces = [];
+  let enrichedContext = '';
+
+  if (needsMedical) {
+    nearbyPlaces = await findNearbyPlaces(userLoc?.lat, userLoc?.lng, 'hopital urgence clinique pharmacie');
+    if (nearbyPlaces.length) {
+      enrichedContext +=
+        `\n\n[DONNÉES GPS EN TEMPS RÉEL - ÉTABLISSEMENTS DE SANTÉ À PROXIMITÉ (${userLoc?.lat || ''}, ${userLoc?.lng || ''})] :\n` +
+        nearbyPlaces.map((p, i) => `${i + 1}. ${p.name} - ${p.address} (Lien GPS: ${p.mapUrl})`).join('\n') +
+        `\nIndique immédiatement ces établissements si l'utilisateur cherche un médecin, une pharmacie ou une urgence, et rappelle le numéro d'urgence adapté.`;
+    }
+  }
+
+  const contents = loadChatHistoryContents(currentChatId, q.u.id);
+  const currentParts = buildFileParts(files);
+  let fullUserPrompt =
+    text || 'Veuillez analyser avec précision les documents ou photos joints et me fournir une synthèse détaillée.';
+  if (enrichedContext) {
+    fullUserPrompt += '\n\n' + enrichedContext;
+  }
+  currentParts.push({ text: fullUserPrompt });
+  contents.push({ role: 'user', parts: currentParts });
+
+  const isPdfRequest =
+    /\b(en pdf|format pdf|document pdf|cr[ée]e[rz]? un pdf|fais[- ]moi un pdf|g[ée]n[èe]re[rz]? un pdf|exporter en pdf|fiche pdf|ملف pdf)\b/i.test(
+      text
+    );
+
+  const isImagePrompt =
+    !files.length &&
+    /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|ارسم)\b.*(image|photo|illustration|dessin|tableau|picture|صورة|رسم)/i.test(
+      text
+    );
+
+  const isAutoQcmPrompt =
+    !isPdfRequest &&
+    /^(gén[èe]re|cr[ée]e|fais|donne|prépare|make|create)\b.*(qcm|quiz|questionnaire à choix|اختبار اختيار)/i.test(
+      text
+    );
+
+  return {
+    text,
+    files,
+    currentChatId,
+    requestedModel,
+    powerMode,
+    nearbyPlaces,
+    needsSearch,
+    urlsInPrompt,
+    contents,
+    isPdfRequest,
+    isImagePrompt,
+    isAutoQcmPrompt
+  };
+}
+
+function finalizeChatMessages(currentChatId, uid, text, files, outputText, extraFiles = []) {
+  const now = Date.now();
+  const userMsgId = 'msg_' + now + '_u';
+  const botMsgId = 'msg_' + (now + 1) + '_b';
+
+  db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+    userMsgId,
+    currentChatId,
+    uid,
+    'user',
+    text,
+    JSON.stringify(files.map(f => ({ name: f.name, type: f.type, url: f.url }))),
+    now
+  );
+  db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)').run(
+    botMsgId,
+    currentChatId,
+    uid,
+    'bot',
+    outputText,
+    JSON.stringify(extraFiles),
+    now + 1
+  );
+  db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now + 1, currentChatId);
+
+  let chatTitle = null;
+  const msgCount = db.prepare('SELECT COUNT(*) as c FROM chat_msgs WHERE chat_id=?').get(currentChatId).c;
+  if (msgCount <= 2 && text) {
+    chatTitle = text.slice(0, 36) + (text.length > 36 ? '…' : '');
+    db.prepare('UPDATE chats SET title=? WHERE id=?').run(chatTitle, currentChatId);
+  }
+
+  return { userMsgId, botMsgId, chatTitle };
+}
+
+// Endpoint streaming SSE (temps réel mot à mot)
+app.post('/api/chat/stream', auth, limit(60, 6e4), async (q, r) => {
+  const startTime = Date.now();
+  r.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  r.setHeader('Cache-Control', 'no-cache, no-transform');
+  r.setHeader('Connection', 'keep-alive');
+  r.flushHeaders?.();
+
+  const sendEvent = (event, data) => {
+    r.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const ai = getAiClient();
+    if (!ai) {
+      sendEvent('error', { error: 'Clé API Gemini manquante sur le serveur (GEMINI_API_KEY).' });
+      return r.end();
+    }
+
+    const ctx = await prepareChatContext(q);
+    if (!ctx.text && !ctx.files.length) {
+      sendEvent('error', { error: 'Message ou fichier requis.' });
+      return r.end();
+    }
+
+    // 1. Auto-image generation
+    if (ctx.isImagePrompt) {
+      const imagePrompt =
+        ctx.text
+          .replace(
+            /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|ارسم)\s*(moi|une|un|des|le|la|image|photo|illustration|dessin|picture|صورة|رسم)*\s*(de|d'|d’|pour|of|about)?\s*/i,
+            ''
+          )
+          .trim() || ctx.text;
+      const imageUrl = await generateHighQualityImage(imagePrompt, '1:1');
+      const botMsgText = `Voici votre illustration générée par NOVA :\n\n**« ${imagePrompt} »**\n\n![${imagePrompt}](${imageUrl})`;
+      const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
+        ctx.currentChatId,
+        q.u.id,
+        ctx.text,
+        ctx.files,
+        botMsgText,
+        []
+      );
+      sendEvent('chunk', { delta: botMsgText });
+      sendEvent('done', {
+        ok: true,
+        text: botMsgText,
+        imageUrl,
+        speechSummary: `Illustration générée pour ${imagePrompt.slice(0, 60)}`,
+        detectedLang: detectLanguage(ctx.text),
+        chatId: ctx.currentChatId,
+        userMsgId,
+        botMsgId,
+        title: chatTitle,
+        modelUsed: DEFAULT_MODEL,
+        durationMs: Date.now() - startTime
+      });
+      return r.end();
+    }
+
+    // 2. Auto interactive QCM generation
+    if (ctx.isAutoQcmPrompt) {
+      const qcm = await generateStructuredQcm(ai, {
+        topic: ctx.text,
+        language: detectLanguage(ctx.text) === 'ar' ? 'Arabe' : 'Français',
+        files: ctx.files
+      });
+      const botMarkdown = formatQcmMarkdown(qcm);
+      const metaFiles = [{ type: 'nova/qcm', name: qcm.title, qcm }];
+      const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
+        ctx.currentChatId,
+        q.u.id,
+        ctx.text,
+        ctx.files,
+        botMarkdown,
+        metaFiles
+      );
+      sendEvent('chunk', { delta: botMarkdown });
+      sendEvent('done', {
+        ok: true,
+        text: botMarkdown,
+        qcm,
+        files: metaFiles,
+        speechSummary: `QCM interactif généré : ${qcm.title}`,
+        detectedLang: detectLanguage(botMarkdown),
+        chatId: ctx.currentChatId,
+        userMsgId,
+        botMsgId,
+        title: chatTitle,
+        modelUsed: DEFAULT_MODEL,
+        durationMs: Date.now() - startTime
+      });
+      return r.end();
+    }
+
+    // 3. Streaming text + grounding
+    const primaryModel = ctx.powerMode === 'fast' ? 'gemini-3.1-flash-lite' : ctx.requestedModel;
+    const candidateModels = [...new Set([primaryModel, DEFAULT_MODEL, 'gemini-3.1-flash-lite'])];
+
+    let outputText = '';
+    let effectiveModel = candidateModels[0];
+    let webSources = [];
+    let lastError = null;
+
+    for (const modelCandidate of candidateModels) {
+      try {
+        const config = buildGeminiConfig(modelCandidate, NOVA_SYSTEM_PROMPT, {
+          powerMode: ctx.powerMode,
+          useSearch: ctx.needsSearch,
+          urlsInPrompt: ctx.urlsInPrompt
+        });
+
+        const stream = await ai.models.generateContentStream({
+          model: modelCandidate,
+          contents: ctx.contents,
+          config
+        });
+
+        let lastChunk = null;
+        for await (const chunk of stream) {
+          lastChunk = chunk;
+          const delta = chunk.text || '';
+          if (delta) {
+            outputText += delta;
+            sendEvent('chunk', { delta });
+          }
+          const chunkSources = extractGroundingSources(chunk);
+          if (chunkSources.length) webSources = chunkSources;
+        }
+        if (!webSources.length && lastChunk) {
+          webSources = extractGroundingSources(lastChunk);
+        }
+        if (outputText.trim()) {
+          effectiveModel = modelCandidate;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Stream model ${modelCandidate} failed:`, err.message);
+        lastError = err;
+        if (outputText.trim()) break; // Partial output already sent
+      }
+    }
+
+    if (!outputText.trim()) {
+      sendEvent('error', { error: formatGeminiError(lastError || new Error('Réponse vide du modèle IA.')) });
+      return r.end();
+    }
+
+    const extraFiles = [];
+    if (webSources.length || ctx.nearbyPlaces.length || ctx.isPdfRequest) {
+      extraFiles.push({
+        type: 'nova/meta',
+        sources: webSources,
+        places: ctx.nearbyPlaces,
+        isPdfReady: ctx.isPdfRequest
+      });
+    }
+
+    const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
+      ctx.currentChatId,
+      q.u.id,
+      ctx.text,
+      ctx.files,
+      outputText,
+      extraFiles
+    );
+
+    sendEvent('done', {
+      ok: true,
+      text: outputText,
+      speechSummary: buildSpeechSummary(outputText),
+      detectedLang: detectLanguage(outputText),
+      nearbyPlaces: ctx.nearbyPlaces,
+      webSources,
+      isPdfReady: ctx.isPdfRequest,
+      files: extraFiles,
+      chatId: ctx.currentChatId,
+      userMsgId,
+      botMsgId,
+      title: chatTitle,
+      modelUsed: effectiveModel,
+      durationMs: Date.now() - startTime
+    });
+    return r.end();
+  } catch (e) {
+    console.error('Stream error:', e);
+    sendEvent('error', { error: formatGeminiError(e) });
+    return r.end();
+  }
+});
+
+// Endpoint classique (non-streaming)
 app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
   const startTime = Date.now();
   try {
-    const text = String(q.body.text || '').trim();
-    const files = Array.isArray(q.body.files) ? q.body.files.slice(0, 6) : [];
-    const chatId = String(q.body.chatId || '').trim();
-    const requestedModel = q.body.model || q.u.model || 'gemini-2.5-flash';
-    const temp = typeof q.body.temp === 'number' ? q.body.temp : 0.7;
-    const tokens = typeof q.body.tokens === 'number' ? Math.min(q.body.tokens, 8192) : 2048;
-    const userLoc = q.body.location; // { lat, lng, city }
-    const isExplicitWebSearch = q.body.webSearch === true;
-
-    if (!text && !files.length) {
-      return r.status(400).json({ error: 'Message ou fichier requis.' });
-    }
-
-    if (!getGeminiApiKey()) {
+    const ai = getAiClient();
+    if (!ai) {
       return r.status(500).json({ error: 'Configuration serveur : variable GEMINI_API_KEY manquante.' });
     }
 
-    const now = Date.now();
-    let currentChatId = chatId;
-    let chat = chatId ? db.prepare('SELECT * FROM chats WHERE id=? AND uid=?').get(chatId, q.u.id) : null;
-
-    if (!chat) {
-      currentChatId = 'chat_' + now;
-      const initialTitle = text ? (text.slice(0, 32) + (text.length > 32 ? '…' : '')) : 'Nouvelle conversation';
-      db.prepare('INSERT INTO chats(id, uid, title, created, updated) VALUES(?,?,?,?,?)')
-        .run(currentChatId, q.u.id, initialTitle, now, now);
+    const ctx = await prepareChatContext(q);
+    if (!ctx.text && !ctx.files.length) {
+      return r.status(400).json({ error: 'Message ou fichier requis.' });
     }
 
-    // Détection automatique de demande de génération d'image HD
-    const isImagePrompt = /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|arسم)\b.*(image|photo|illustration|dessin|tableau|picture|صورة|رسم)/i.test(text);
-    if (isImagePrompt && !files.length) {
-      try {
-        const imagePrompt = text.replace(/^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|arسم)\s*(moi|une|un|des|le|la|image|photo|illustration|dessin|picture|صورة|رسم)*\s*(de|d'|d’|pour|of|about)?\s*/i, '').trim() || text;
-        const imageUrl = await generateHighQualityImage(imagePrompt, '1:1');
-        const botMsgText = `Voici votre image générée en haute résolution pour : **« ${imagePrompt} »**\n\n![${imagePrompt}](${imageUrl})\n\n*(Généré par le moteur haute définition NOVA MK)*`;
-        const speechSummary = `Image haute définition générée pour ${imagePrompt.slice(0, 60)}`;
-        
-        const userMsgId = 'msg_' + now + '_u';
-        const botMsgId = 'msg_' + (now + 1) + '_b';
-
-        db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
-          .run(userMsgId, currentChatId, q.u.id, 'user', text, '[]', now);
-        db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
-          .run(botMsgId, currentChatId, q.u.id, 'bot', botMsgText, JSON.stringify([{ name: 'nova_image.png', type: 'image/png', url: imageUrl }]), now + 1);
-        db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now + 1, currentChatId);
-
-        return r.json({
-          ok: true,
-          text: botMsgText,
-          imageUrl,
-          speechSummary,
-          detectedLang: 'fr',
-          chatId: currentChatId,
-          userMsgId,
-          botMsgId,
-          modelUsed: 'gemini-3.1-flash-lite-image',
-          durationMs: Date.now() - startTime
-        });
-      } catch (err) {
-        console.warn('Auto image gen failed, falling back to chat text:', err.message);
-      }
-    }
-
-    // Détection médicale ciblée et recherche internet parallèle non-bloquante
-    const lowerText = text.toLowerCase();
-    const needsMedical = /hopital|hôpital|clinique|cabinet|urgence|médical|médecin|docteur|douleur|blessure|malade|santé|pharmacie|hospital|clinic|doctor|emergency|مستشفى|طبيب|عيادة|طوارئ|صيدلية|ألم|مرض|إسعاف/.test(lowerText);
-    const needsSearch = isExplicitWebSearch || /actualit|nouvelle|météo|weather|news|أخبار|طقس/.test(lowerText);
-
-    let enrichedContext = '';
-    let nearbyPlaces = [];
-    let webSources = [];
-
-    // Exécution parallèle immédiate et ultra-rapide
-    if (needsMedical || needsSearch) {
-      const [medicalRes, searchRes] = await Promise.allSettled([
-        needsMedical ? findNearbyPlaces(userLoc?.lat, userLoc?.lng, 'hopital urgence clinique') : Promise.resolve([]),
-        needsSearch ? searchLiveWeb(text) : Promise.resolve([])
-      ]);
-
-      if (medicalRes.status === 'fulfilled' && medicalRes.value?.length) {
-        nearbyPlaces = medicalRes.value;
-        enrichedContext += `\n\n[DONNÉES EN TEMPS RÉEL - ÉTABLISSEMENTS DE SANTÉ À PROXIMITÉ (GPS: ${userLoc?.lat || 'Général'}, ${userLoc?.lng || ''})] :\n` +
-          nearbyPlaces.map((p, i) => `${i + 1}. ${p.name} - ${p.address} (Lien GPS: ${p.mapUrl})`).join('\n') +
-          `\nImportant : Si l'utilisateur exprime une détresse ou cherche un secours, indique-lui immédiatement le nom et l'adresse de ces hôpitaux/cabinets les plus proches, conseille d'appeler les urgences locales (15/112 en Europe, 190 en Tunisie, 911 aux USA) et formule une consigne vocale rassurante et directe.\n`;
-      }
-
-      if (searchRes.status === 'fulfilled' && searchRes.value?.length) {
-        webSources = searchRes.value;
-        enrichedContext += `\n\n[RÉSULTATS DE RECHERCHE INTERNET EN DIRECT] :\n` +
-          webSources.map((s, idx) => `Source ${idx + 1}: ${s}`).join('\n') +
-          `\nIntègre ces données vérifiées d'actualité pour apporter une réponse pointue et à jour.\n`;
-      }
-    }
-
-    // Load recent conversation history (derniers 14 messages pour latence minimale)
-    const historyRows = db.prepare('SELECT role, text FROM chat_msgs WHERE chat_id=? AND uid=? ORDER BY ts ASC LIMIT 14')
-      .all(currentChatId, q.u.id);
-
-    const contents = [];
-    for (const row of historyRows) {
-      if (row.text) {
-        contents.push({
-          role: row.role === 'user' ? 'user' : 'model',
-          parts: [{ text: row.text }]
-        });
-      }
-    }
-
-    // Build current user message parts (multimodal)
-    const currentParts = [];
-    for (const f of files) {
-      if (!f.data) continue;
-      let rawData = String(f.data);
-      if (rawData.includes(';base64,')) {
-        rawData = rawData.split(';base64,')[1];
-      }
-      rawData = rawData.trim();
-      const mimeType = f.type === 'application/pdf' ? 'application/pdf' : (/^image\/(png|gif|webp|svg\+xml)$/.test(f.type) ? f.type : 'image/jpeg');
-      currentParts.push({
-        inlineData: {
-          mimeType,
-          data: rawData
-        }
+    if (ctx.isImagePrompt) {
+      const imagePrompt =
+        ctx.text
+          .replace(
+            /^(gén[èe]re|cr[ée]e|fais|dessine|illustre|make|create|draw|generate|ارسم)\s*(moi|une|un|des|le|la|image|photo|illustration|dessin|picture|صورة|رسم)*\s*(de|d'|d’|pour|of|about)?\s*/i,
+            ''
+          )
+          .trim() || ctx.text;
+      const imageUrl = await generateHighQualityImage(imagePrompt, '1:1');
+      const botMsgText = `Voici votre illustration générée par NOVA :\n\n**« ${imagePrompt} »**\n\n![${imagePrompt}](${imageUrl})`;
+      const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
+        ctx.currentChatId,
+        q.u.id,
+        ctx.text,
+        ctx.files,
+        botMsgText,
+        []
+      );
+      return r.json({
+        ok: true,
+        text: botMsgText,
+        imageUrl,
+        speechSummary: `Illustration générée pour ${imagePrompt.slice(0, 60)}`,
+        detectedLang: detectLanguage(ctx.text),
+        chatId: ctx.currentChatId,
+        userMsgId,
+        botMsgId,
+        title: chatTitle,
+        modelUsed: DEFAULT_MODEL,
+        durationMs: Date.now() - startTime
       });
     }
-    
-    let fullUserPrompt = text || 'Veuillez analyser avec précision les documents ou photos joints et me fournir une synthèse détaillée.';
-    if (enrichedContext) {
-      fullUserPrompt += '\n\n' + enrichedContext;
-    }
-    currentParts.push({ text: fullUserPrompt });
-    contents.push({ role: 'user', parts: currentParts });
 
-    // Moteur IA ultra-rapide NOVA avec chaîne de redondance multi-modèles
-    const candidateModels = [
-      (requestedModel && requestedModel !== 'gemini-2.5-flash') ? requestedModel : null,
-      'gemini-flash-lite-latest',
-      'gemini-3-flash-preview',
-      'gemini-flash-latest',
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash'
-    ].filter(Boolean);
-    const uniqueModels = [...new Set(candidateModels)];
+    if (ctx.isAutoQcmPrompt) {
+      const qcm = await generateStructuredQcm(ai, {
+        topic: ctx.text,
+        language: detectLanguage(ctx.text) === 'ar' ? 'Arabe' : 'Français',
+        files: ctx.files
+      });
+      const botMarkdown = formatQcmMarkdown(qcm);
+      const metaFiles = [{ type: 'nova/qcm', name: qcm.title, qcm }];
+      const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
+        ctx.currentChatId,
+        q.u.id,
+        ctx.text,
+        ctx.files,
+        botMarkdown,
+        metaFiles
+      );
+      return r.json({
+        ok: true,
+        text: botMarkdown,
+        qcm,
+        files: metaFiles,
+        speechSummary: `QCM interactif généré : ${qcm.title}`,
+        detectedLang: detectLanguage(botMarkdown),
+        chatId: ctx.currentChatId,
+        userMsgId,
+        botMsgId,
+        title: chatTitle,
+        modelUsed: DEFAULT_MODEL,
+        durationMs: Date.now() - startTime
+      });
+    }
+
+    const primaryModel = ctx.powerMode === 'fast' ? 'gemini-3.1-flash-lite' : ctx.requestedModel;
+    const candidateModels = [...new Set([primaryModel, DEFAULT_MODEL, 'gemini-3.1-flash-lite'])];
 
     let outputText = null;
+    let webSources = [];
+    let effectiveModel = candidateModels[0];
     let lastError = null;
-    let effectiveModel = uniqueModels[0];
 
-    for (const modelCandidate of uniqueModels) {
+    for (const modelCandidate of candidateModels) {
       try {
-        outputText = await callGeminiGenerate(modelCandidate, NOVA_SYSTEM_PROMPT, contents, temp, tokens);
-        effectiveModel = modelCandidate;
-        break;
+        const config = buildGeminiConfig(modelCandidate, NOVA_SYSTEM_PROMPT, {
+          powerMode: ctx.powerMode,
+          useSearch: ctx.needsSearch,
+          urlsInPrompt: ctx.urlsInPrompt
+        });
+        const response = await generateWithRetry(ai, {
+          model: modelCandidate,
+          contents: ctx.contents,
+          config
+        });
+        if (response.text) {
+          outputText = response.text;
+          webSources = extractGroundingSources(response);
+          effectiveModel = modelCandidate;
+          break;
+        }
       } catch (err) {
         console.warn(`Model ${modelCandidate} failed:`, err.message);
         lastError = err;
@@ -801,74 +1560,51 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
     }
 
     if (!outputText) {
-      console.error('All AI models failed, providing emergency fallback response. Last error:', lastError?.message);
-      const isArabicQuery = /[\u0600-\u06FF]/.test(text);
-      if (isArabicQuery) {
-        outputText = "مرحباً بك، أنا نوفا (NOVA)، المساعد الذكي المطور من قبل Med Rayen Bouazizi, CEO of MK. الخوادم السحابية تشهد ضغطاً مؤقتاً طفيفاً، وتم تسجيل رسالتك بنجاح. سأكون في خدمتك دائماً.";
-      } else {
-        outputText = "Bonjour ! Je suis **NOVA**, votre assistant IA conçu par Med Rayen Bouazizi, CEO of MK. Les serveurs de calcul haute performance subissent un pic d'affluence passager, mais votre session et vos données restent parfaitement actives. N'hésitez pas à reformuler votre demande.";
-      }
-      effectiveModel = 'nova-local-fallback';
+      return r.status(502).json({ error: formatGeminiError(lastError || new Error('Réponse vide du modèle IA.')) });
     }
 
-    // Détection de la langue principale (Arabe, Français, Anglais)
-    const isAr = /[\u0600-\u06FF]/.test(outputText);
-    const isEn = /\b(the|is|and|you|this|hospital|doctor|health)\b/i.test(outputText) && !/\b(le|la|les|est|vous|hôpital)\b/i.test(outputText);
-    const detectedLang = isAr ? 'ar' : (isEn ? 'en' : 'fr');
-
-    // Résumé vocal optimisé pour haut-parleur et écran montre (court, percutant et élégant)
-    let speechSummary = '';
-    const cleanOutput = outputText.replace(/```[\s\S]*?```/g, '')
-                                  .replace(/[#*`_>|!\[\]\(\)]/g, '')
-                                  .replace(/https?:\/\/\S+/g, '')
-                                  .replace(/\s+/g, ' ')
-                                  .trim();
-    const firstSentenceMatch = cleanOutput.match(/^(.*?[.!?](\s|$))/);
-    speechSummary = firstSentenceMatch ? firstSentenceMatch[0].trim() : cleanOutput.slice(0, 160);
-    if (speechSummary.length < 25 && cleanOutput.length > 25) {
-      speechSummary = cleanOutput.slice(0, 160);
+    const extraFiles = [];
+    if (webSources.length || ctx.nearbyPlaces.length || ctx.isPdfRequest) {
+      extraFiles.push({
+        type: 'nova/meta',
+        sources: webSources,
+        places: ctx.nearbyPlaces,
+        isPdfReady: ctx.isPdfRequest
+      });
     }
 
-    const userMsgId = 'msg_' + now + '_u';
-    const botMsgId = 'msg_' + (now + 1) + '_b';
-
-    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
-      .run(userMsgId, currentChatId, q.u.id, 'user', text, JSON.stringify(files.map(f => ({ name: f.name, type: f.type, url: f.url }))), now);
-
-    db.prepare('INSERT INTO chat_msgs(id, chat_id, uid, role, text, files, ts) VALUES(?,?,?,?,?,?,?)')
-      .run(botMsgId, currentChatId, q.u.id, 'bot', outputText, '[]', now + 1);
-
-    db.prepare('UPDATE chats SET updated=? WHERE id=?').run(now + 1, currentChatId);
-
-    // Titre automatique sur la première interaction
-    let chatTitle = null;
-    const msgCount = db.prepare('SELECT COUNT(*) as c FROM chat_msgs WHERE chat_id=?').get(currentChatId).c;
-    if (msgCount <= 2 && text) {
-      chatTitle = text.slice(0, 32) + (text.length > 32 ? '…' : '');
-      db.prepare('UPDATE chats SET title=? WHERE id=?').run(chatTitle, currentChatId);
-    }
-
-    const durationMs = Date.now() - startTime;
+    const { userMsgId, botMsgId, chatTitle } = finalizeChatMessages(
+      ctx.currentChatId,
+      q.u.id,
+      ctx.text,
+      ctx.files,
+      outputText,
+      extraFiles
+    );
 
     return r.json({
       ok: true,
       text: outputText,
-      speechSummary,
-      detectedLang,
-      nearbyPlaces,
+      speechSummary: buildSpeechSummary(outputText),
+      detectedLang: detectLanguage(outputText),
+      nearbyPlaces: ctx.nearbyPlaces,
       webSources,
-      chatId: currentChatId,
+      isPdfReady: ctx.isPdfRequest,
+      files: extraFiles,
+      chatId: ctx.currentChatId,
       userMsgId,
       botMsgId,
       title: chatTitle,
       modelUsed: effectiveModel,
-      durationMs
+      durationMs: Date.now() - startTime
     });
   } catch (e) {
     console.error('Server chat error:', e);
-    return r.status(500).json({ error: 'Erreur interne du serveur lors du traitement.' });
+    return r.status(500).json({ error: formatGeminiError(e) });
   }
 });
 
 const PORT = parseInt(E.PORT || '3000', 10);
-app.listen(PORT, '0.0.0.0', () => console.log('NOVA Assistant IA (Développé par Med Rayen Bouazizi, CEO of MK) en écoute sur http://0.0.0.0:' + PORT));
+app.listen(PORT, '0.0.0.0', () =>
+  console.log('NOVA Assistant IA (Développé par Med Rayen Bouazizi, CEO of MK) en écoute sur http://0.0.0.0:' + PORT)
+);

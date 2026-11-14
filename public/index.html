@@ -12,6 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="/vendor/html2canvas.min.js" defer></script>
+<script src="/vendor/jspdf.umd.min.js" defer></script>
 
 <style>
 :root{
@@ -769,6 +771,116 @@ button:active{transform:scale(.97)}
   .a4-wrap{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0}
   .sel{max-width:190px}
 }
+
+/* ===== BARRE OUTILS RAPIDES & MODES PUISSANCE ===== */
+.comp-tools{
+  max-width:820px;margin:0 auto 8px;display:flex;align-items:center;
+  justify-content:space-between;gap:8px;flex-wrap:wrap;padding:0 4px;
+}
+.tool-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tool-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 11px;
+  border-radius:10px;border:1px solid var(--line);background:var(--card);
+  color:var(--mut);font-size:12px;font-weight:600;transition:.18s var(--ease);
+}
+.tool-btn:hover{color:var(--fg);border-color:var(--blue);background:var(--card-sub)}
+.tool-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.power-switch{
+  display:inline-flex;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:2px;gap:2px;
+}
+.power-opt{
+  padding:4px 9px;border-radius:8px;font-size:11.5px;font-weight:600;
+  color:var(--mut);transition:.18s var(--ease);
+}
+.power-opt.on{background:var(--inv);color:var(--invfg)}
+
+/* ===== SOURCES WEB VERIFIÉES ===== */
+.sources-box{
+  margin-top:10px;padding:10px 14px;border-radius:12px;
+  background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.22);
+}
+.sources-title{
+  font-size:11.5px;font-weight:700;color:var(--blue);
+  display:flex;align-items:center;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;
+}
+.sources-list{display:flex;flex-wrap:wrap;gap:6px}
+.source-link{
+  font-size:11.5px;padding:4px 9px;border-radius:8px;
+  background:var(--card);border:1px solid var(--line);color:var(--fg);
+  text-decoration:none;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  transition:.18s;
+}
+.source-link:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ===== WIDGET QCM INTERACTIF ===== */
+.qcm-card{
+  margin-top:10px;background:var(--card);border:1px solid var(--line-strong);
+  border-radius:18px;padding:18px;box-shadow:0 8px 28px rgba(0,0,0,.18);
+}
+.qcm-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap;
+}
+.qcm-head h4{font-size:16px;font-weight:800;color:var(--fg);margin-bottom:4px}
+.qcm-meta{font-size:12px;color:var(--mut)}
+.qcm-q{
+  margin-bottom:16px;padding:14px;border-radius:14px;
+  background:var(--card-sub);border:1px solid var(--line);
+}
+.qcm-q-title{font-size:14px;font-weight:700;margin-bottom:10px;line-height:1.5}
+.qcm-opts{display:grid;gap:7px}
+.qcm-opt{
+  text-align:left;padding:10px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--card);font-size:13.5px;
+  display:flex;align-items:center;gap:10px;transition:.18s var(--ease);width:100%;
+}
+.qcm-opt:hover:not(:disabled){border-color:var(--blue);background:rgba(59,130,246,0.08)}
+.qcm-opt.selected{border-color:var(--blue);background:rgba(59,130,246,0.16);font-weight:600}
+.qcm-opt.correct{border-color:var(--green);background:rgba(16,185,129,0.16);color:var(--fg)}
+.qcm-opt.wrong{border-color:var(--red);background:rgba(239,68,68,0.16);color:var(--fg)}
+.qcm-letter{
+  width:24px;height:24px;border-radius:7px;background:var(--card-sub);
+  border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:700;flex:none;
+}
+.qcm-opt.selected .qcm-letter{background:var(--blue);color:#fff;border-color:var(--blue)}
+.qcm-opt.correct .qcm-letter{background:var(--green);color:#fff;border-color:var(--green)}
+.qcm-opt.wrong .qcm-letter{background:var(--red);color:#fff;border-color:var(--red)}
+.qcm-exp{
+  margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12.5px;
+  line-height:1.55;background:rgba(16,185,129,0.09);border:1px solid rgba(16,185,129,0.25);
+  display:none;
+}
+.qcm-exp.show{display:block}
+.qcm-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);
+}
+.qcm-score-banner{
+  padding:10px 14px;border-radius:12px;font-weight:700;font-size:14px;
+  background:rgba(59,130,246,0.14);border:1px solid rgba(59,130,246,0.3);color:var(--fg);
+}
+
+/* ===== STUDIOS (QCM, DEVOIR, PDF) ===== */
+.studio-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.studio-grid-2{grid-template-columns:1fr}}
+.studio-box{
+  background:var(--card);border:1px solid var(--line);border-radius:24px;
+  max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,.7);overflow:hidden;
+}
+
+/* ===== IMPRESSION / PDF PROPRE ===== */
+@media print{
+  html,body{height:auto!important;overflow:visible!important;background:#fff!important;color:#000!important}
+  body > *:not(#a4){display:none!important}
+  #a4{position:static!important;background:#fff!important;display:block!important;padding:0!important}
+  .a4-wrap{width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;box-shadow:none!important;border:0!important;background:#fff!important}
+  .a4-header{display:none!important}
+  .a4-body{padding:10mm!important;color:#111!important;overflow:visible!important}
+  .a4-page{background:#fff!important;color:#111!important;border:1px solid #ddd!important;page-break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -902,12 +1014,14 @@ button:active{transform:scale(.97)}
     <div class="top-title-wrap">
       <h2 id="ttl">Nouvelle conversation</h2>
       <div class="top-sub">
-        <span class="model-pill" id="topModelPill">Flash Lite</span>
+        <span class="model-pill" id="topModelPill">Hydrogen 4 · Max</span>
         <span>· Développé par Med Rayen Bouazizi, CEO of MK</span>
       </div>
     </div>
+    <button class="ib" id="bGeo" title="Localisation GPS d'urgence"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+    <button class="ib" id="btnTopGenDoc" title="Créer un Document PDF"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
     <button class="ib" id="btnTopGenImg" title="Studio Image HD"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
-    <button class="ib" id="a4Btn" title="Vue A4 Document"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h5"/></svg></button>
+    <button class="ib" id="a4Btn" title="Aperçu A4 & Export PDF"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h5"/></svg></button>
     <button class="ib" id="clr" title="Supprimer cette discussion"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
   </div>
   
@@ -916,34 +1030,41 @@ button:active{transform:scale(.97)}
   </div>
   
   <div class="comp">
+    <div class="comp-tools">
+      <div class="tool-group">
+        <button class="tool-btn" id="openDocStudio">📄 Créer PDF</button>
+        <button class="tool-btn" id="openQcmStudio">📝 Créer QCM</button>
+        <button class="tool-btn" id="openDevoirStudio">📚 Devoirs & Exercices</button>
+        <button class="tool-btn" id="openImgStudioQuick">🎨 Image HD</button>
+      </div>
+      <div class="power-switch" title="Niveau de puissance du raisonnement IA">
+        <button class="power-opt" data-power="fast">⚡ Rapide</button>
+        <button class="power-opt" data-power="balanced">🧠 Équilibré</button>
+        <button class="power-opt on" data-power="max">🔥 Max</button>
+      </div>
+    </div>
     <div class="cbox">
       <div id="chips"></div>
       <div class="row">
-        <!-- Bouton Générateur d'Image HD -->
-        <button class="ib" id="bGenImg" title="Créer une image en Haute Résolution (IA)">
+        <button class="ib" id="bGenImg" title="Créer une illustration HD (IA)">
           <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
-        <!-- Bouton photo / capture -->
         <button class="ib" id="bImg" title="Joindre une photo ou image (Vision IA)">
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
         </button>
-        <!-- Bouton document PDF -->
         <button class="ib" id="bFile" title="Joindre un document ou PDF">
           <svg viewBox="0 0 24 24"><path d="M21 12l-9 9a6 6 0 01-9-9l9-9a4 4 0 016 6l-9 9a2 2 0 01-3-3l8-8"/></svg>
         </button>
-        <!-- Champ texte -->
-        <textarea id="inp" rows="1" placeholder="Écrivez en français, arabe ou anglais (ex: 'Dessine un lion néon', 'Hôpital proche')…"></textarea>
-        <!-- Bouton microphone vocal avec détection et fallback haute précision -->
+        <textarea id="inp" rows="1" placeholder="Écrivez en français, arabe ou anglais (devoirs, PDF, QCM, code, images, recherche web)…"></textarea>
         <button class="ib mic-btn" id="mic" title="Dictée vocale (Français, Arabe, Anglais)">
           <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/></svg>
         </button>
-        <!-- Bouton envoyer -->
         <button class="send" id="send" title="Envoyer le message">
           <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
       </div>
     </div>
-    <div class="note">NOVA MK · Moteur Rapide 2.5 · Créateur d'Images HD · Liaison Montre Connectée Réelle · Synthèse Vocale Trilingue.</div>
+    <div class="note">NOVA MK · Gemini 4 Hydrogen · PDF & QCM Interactifs · Devoirs & Vision · Smart Watch BLE · Synthèse Vocale Trilingue.</div>
   </div>
 </main>
 </div>
@@ -962,7 +1083,8 @@ button:active{transform:scale(.97)}
     <div class="a4-header">
       <h3>NOVA · VUE DOCUMENT A4</h3>
       <div style="display:flex;gap:8px">
-        <button class="btn-o" id="a4Print">Imprimer / Exporter PDF</button>
+        <button class="btn" id="a4DownloadPdf" style="width:auto;padding:8px 14px;font-size:13px">⬇ Télécharger PDF</button>
+        <button class="btn-o" id="a4Print">Imprimer</button>
         <button class="a4-close" id="a4Close">✕</button>
       </div>
     </div>
@@ -1026,18 +1148,28 @@ button:active{transform:scale(.97)}
       <div class="set-row">
         <div>
           <b>Modèle d'Intelligence Artificielle</b>
-          <small>Sélectionnez le moteur d'inférence adapté</small>
+          <small>Sélectionnez le moteur d'inférence Gemini 4</small>
         </div>
         <select class="sel" id="setModel">
-          <option value="gemini-2.5-flash">NOVA 2.5 Flash (Ultra-rapide ~0.6s · Recommandé)</option>
-          <option value="gemini-flash-latest">NOVA Flash Latest (Vitesse & Multimodal)</option>
-          <option value="gemini-3.8-flash">NOVA 3.8 Flash (Raisonnement Élargi)</option>
+          <option value="gemini-4-hydrogen">NOVA 4 Hydrogen (Puissance & Raisonnement · Recommandé)</option>
+          <option value="gemini-3.1-flash-lite">NOVA 3.1 Flash Lite (Vitesse Maximale)</option>
         </select>
       </div>
       <div class="set-row">
         <div>
-          <b>Recherche Internet Automatique</b>
-          <small>Recherche en direct sur le web via le téléphone</small>
+          <b>Profondeur de Raisonnement</b>
+          <small>Contrôle le niveau de réflexion pour les tâches complexes</small>
+        </div>
+        <select class="sel" id="setPowerMode">
+          <option value="max">🔥 Puissance Max (XHIGH · Devoirs, Code, Sciences)</option>
+          <option value="balanced">🧠 Équilibré (MEDIUM · Polyvalent)</option>
+          <option value="fast">⚡ Rapide (LOW · Réponses instantanées)</option>
+        </select>
+      </div>
+      <div class="set-row">
+        <div>
+          <b>Recherche Google en Direct</b>
+          <small>Vérification temps réel sur internet avec sources cliquables</small>
         </div>
         <div class="toggle on" id="setWebSearch"></div>
       </div>
@@ -1059,13 +1191,6 @@ button:active{transform:scale(.97)}
           <option value="ar-SA">العربية (Arabe)</option>
           <option value="en-US">English (US)</option>
         </select>
-      </div>
-      <div class="set-row">
-        <div>
-          <b>Température (Créativité du modèle)</b>
-          <small>0.2 = Précis & Factuel, 0.7 = Équilibré, 1.0 = Créatif</small>
-        </div>
-        <input class="sel" type="number" id="setTemp" min="0" max="2" step="0.1" value="0.7" style="width:85px;text-align:center">
       </div>
     </div>
 
@@ -1261,6 +1386,159 @@ button:active{transform:scale(.97)}
   </div>
 </div>
 
+<!-- STUDIO CRÉATION DOCUMENT & PDF -->
+<div id="docStudioModal" class="modal hide">
+  <div class="studio-box">
+    <div class="bt-h">
+      <button class="ib" id="docStudioClose">✕</button>
+      <h3>📄 Studio Création Document & PDF</h3>
+    </div>
+    <div style="padding:22px;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
+      <div class="studio-grid-2">
+        <label class="f" style="margin:0">
+          <small>Type de document</small>
+          <select id="docStudioType">
+            <option value="Cours & Fiche de révision">Cours & Fiche de révision</option>
+            <option value="Rapport professionnel">Rapport professionnel</option>
+            <option value="Dissertation / Essai structuré">Dissertation / Essai structuré</option>
+            <option value="CV & Lettre de motivation">CV & Lettre de motivation</option>
+            <option value="Synthèse analytique">Synthèse analytique</option>
+            <option value="Contrat / Compte-rendu">Contrat / Compte-rendu</option>
+          </select>
+        </label>
+        <label class="f" style="margin:0">
+          <small>Langue de rédaction</small>
+          <select id="docStudioLang">
+            <option value="Français">Français</option>
+            <option value="Arabe (الفصحى)">العربية (الفصحى)</option>
+            <option value="English">English</option>
+          </select>
+        </label>
+      </div>
+      <label class="f" style="margin:0">
+        <small>Titre du document</small>
+        <input id="docStudioTitle" placeholder="Ex: Fiche complète sur la Révolution Industrielle">
+      </label>
+      <label class="f" style="margin:0">
+        <small>Instructions et contenu souhaité (ou joignez un PDF/photo avant d'ouvrir)</small>
+        <textarea id="docStudioInstr" rows="4" placeholder="Décrivez précisément le plan, les points clés, le public cible ou les détails à inclure…" style="width:100%;background:var(--card-sub);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;outline:0;resize:vertical"></textarea>
+      </label>
+      <button class="btn" id="btnDoGenDoc">📄 Générer le Document & Exporter PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDIO QCM INTERACTIF -->
+<div id="qcmStudioModal" class="modal hide">
+  <div class="studio-box">
+    <div class="bt-h">
+      <button class="ib" id="qcmStudioClose">✕</button>
+      <h3>📝 Studio Générateur de QCM Interactif</h3>
+    </div>
+    <div style="padding:22px;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
+      <div class="studio-grid-2">
+        <label class="f" style="margin:0">
+          <small>Matière / Domaine</small>
+          <input id="qcmStudioSubject" placeholder="Ex: Biologie, Maths, Histoire, Python…">
+        </label>
+        <label class="f" style="margin:0">
+          <small>Niveau</small>
+          <select id="qcmStudioLevel">
+            <option value="Collège">Collège</option>
+            <option value="Lycée / Baccalauréat" selected>Lycée / Baccalauréat</option>
+            <option value="Université / Prépa">Université / Prépa</option>
+            <option value="Professionnel / Concours">Professionnel / Concours</option>
+          </select>
+        </label>
+      </div>
+      <div class="studio-grid-2">
+        <label class="f" style="margin:0">
+          <small>Nombre de questions</small>
+          <select id="qcmStudioCount">
+            <option value="5">5 questions (Rapide)</option>
+            <option value="8" selected>8 questions (Standard)</option>
+            <option value="12">12 questions (Complet)</option>
+            <option value="15">15 questions (Examen)</option>
+            <option value="20">20 questions (Intensif)</option>
+          </select>
+        </label>
+        <label class="f" style="margin:0">
+          <small>Langue</small>
+          <select id="qcmStudioLang">
+            <option value="Français">Français</option>
+            <option value="Arabe (الفصحى)">العربية (الفصحى)</option>
+            <option value="English">English</option>
+          </select>
+        </label>
+      </div>
+      <label class="f" style="margin:0">
+        <small>Chapitre, thème ou consigne (utilise aussi vos PDF/photos joints)</small>
+        <textarea id="qcmStudioTopic" rows="3" placeholder="Ex: Les lois de Newton et la mécanique du point, ou la génétique mendélienne…" style="width:100%;background:var(--card-sub);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;outline:0;resize:vertical"></textarea>
+      </label>
+      <button class="btn" id="btnDoGenQcm">📝 Générer le QCM Interactif (+ Export PDF)</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDIO DEVOIRS & EXERCICES -->
+<div id="devoirStudioModal" class="modal hide">
+  <div class="studio-box">
+    <div class="bt-h">
+      <button class="ib" id="devoirStudioClose">✕</button>
+      <h3>📚 Studio Devoirs, Exercices & Corrigés</h3>
+    </div>
+    <div style="padding:22px;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
+      <div class="tabs" style="margin-bottom:4px">
+        <button id="devModeCreate" class="on">Créer un Devoir + Corrigé</button>
+        <button id="devModeSolve">Résoudre & Expliquer un Devoir</button>
+      </div>
+      <div class="studio-grid-2">
+        <label class="f" style="margin:0">
+          <small>Matière</small>
+          <input id="devStudioSubject" value="Mathématiques" placeholder="Maths, Physique, Français, Arabe, SVT…">
+        </label>
+        <label class="f" style="margin:0">
+          <small>Niveau scolaire</small>
+          <select id="devStudioLevel">
+            <option value="Primaire">Primaire</option>
+            <option value="Collège">Collège</option>
+            <option value="Lycée / Terminale / Bac" selected>Lycée / Terminale / Bac</option>
+            <option value="Université / Licence / Master">Université / Licence / Master</option>
+          </select>
+        </label>
+      </div>
+      <label class="f" style="margin:0">
+        <small>Langue</small>
+        <select id="devStudioLang">
+          <option value="Français">Français</option>
+          <option value="Arabe (الفصحى)">العربية (الفصحى)</option>
+          <option value="English">English</option>
+        </select>
+      </label>
+      <label class="f" style="margin:0">
+        <small>Sujet du devoir ou énoncé à résoudre (vous pouvez aussi joindre une photo/PDF)</small>
+        <textarea id="devStudioTopic" rows="4" placeholder="Ex: Devoir sur les intégrales et équations différentielles avec barème sur 20 points…" style="width:100%;background:var(--card-sub);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;outline:0;resize:vertical"></textarea>
+      </label>
+      <button class="btn" id="btnDoGenDevoir">📚 Lancer avec Puissance Maximale</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMATION / RENOMMAGE (SANS window.confirm / window.prompt) -->
+<div class="modal hide" id="actionModal">
+  <div class="mbox" style="max-width:420px">
+    <h3 id="actionModalTitle">Confirmation</h3>
+    <div class="mbody">
+      <p id="actionModalDesc" style="margin-bottom:12px"></p>
+      <input id="actionModalInput" class="hide" style="width:100%;background:var(--card-sub);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;outline:0">
+    </div>
+    <div style="display:flex;gap:10px;padding:0 24px 22px">
+      <button class="btn-o" id="actionModalCancel" style="flex:1">Annuler</button>
+      <button class="btn" id="actionModalConfirm" style="flex:1">Confirmer</button>
+    </div>
+  </div>
+</div>
+
 <!-- BARRE DE LECTURE AUDIO FLOTTANTE & ÉQUALISEUR EN DIRECT -->
 <div id="floatingAudioBar">
   <div class="audio-equalizer">
@@ -1343,9 +1621,8 @@ let lastSpeechLang = 'fr-FR';
 
 let SETTINGS = {
   theme: 'dark',
-  model: 'gemini-2.5-flash',
-  temp: 0.7,
-  tokens: 2048,
+  model: 'gemini-4-hydrogen',
+  powerMode: 'max',
   anim: true,
   autoVoice: false,
   webSearch: true,
@@ -1355,8 +1632,8 @@ let SETTINGS = {
 try {
   const saved = JSON.parse(localStorage.getItem('nova_client_settings'));
   if (saved) {
-    if (saved.model === 'gemini-3-flash-preview') saved.model = 'gemini-2.5-flash';
-    saved.autoVoice = false; // Audio strictly on user demand via explicit 'Écouter' button
+    if (saved.model !== 'gemini-3.1-flash-lite') saved.model = 'gemini-4-hydrogen';
+    saved.autoVoice = false;
     Object.assign(SETTINGS, saved);
   }
 } catch(e){}
@@ -1365,23 +1642,33 @@ function saveSettingsLocally() {
   localStorage.setItem('nova_client_settings', JSON.stringify(SETTINGS));
 }
 
+function updatePowerUI() {
+  const mode = SETTINGS.powerMode || 'max';
+  $$('.power-opt').forEach(b => b.classList.toggle('on', b.dataset.power === mode));
+  const pill = $('#topModelPill');
+  if (pill) {
+    const modelLabel = SETTINGS.model === 'gemini-3.1-flash-lite' ? 'Flash Lite' : 'Hydrogen 4';
+    const powerLabel = mode === 'fast' ? 'Rapide' : (mode === 'balanced' ? 'Équilibré' : 'Max');
+    pill.textContent = `${modelLabel} · ${powerLabel}`;
+  }
+}
+
 function applySettings() {
   document.documentElement.dataset.theme = SETTINGS.theme;
   const setV = (sel, val) => { const el = $(sel); if (el && val !== undefined) el.value = val; };
   setV('#setTheme', SETTINGS.theme);
   setV('#setModel', SETTINGS.model);
-  setV('#setTemp', SETTINGS.temp);
+  setV('#setPowerMode', SETTINGS.powerMode || 'max');
   setV('#setVoiceLang', SETTINGS.voiceLang);
-  
-  const topModelEl = $('#topModelPill');
-  if (topModelEl) topModelEl.textContent = SETTINGS.model.replace('gemini-', '').replace('-preview', '');
-  
+
+  updatePowerUI();
+
   const elAutoVoice = $('#setAutoVoice');
   if (elAutoVoice) elAutoVoice.classList.toggle('on', !!SETTINGS.autoVoice);
 
   const elWebSearch = $('#setWebSearch');
   if (elWebSearch) elWebSearch.classList.toggle('on', !!SETTINGS.webSearch);
-  
+
   const elAnim = $('#setAnim');
   if (elAnim) elAnim.classList.toggle('on', !!SETTINGS.anim);
 }
@@ -1725,11 +2012,48 @@ async function deleteChat(id) {
   }
 }
 
+// Custom modal helpers (replaces window.confirm and window.prompt safely in iframes)
+function showConfirmModal(title, desc) {
+  return new Promise(resolve => {
+    $('#actionModalTitle').textContent = title;
+    $('#actionModalDesc').textContent = desc;
+    $('#actionModalInput').classList.add('hide');
+    $('#actionModal').classList.remove('hide');
+    const cleanup = val => {
+      $('#actionModal').classList.add('hide');
+      $('#actionModalConfirm').onclick = null;
+      $('#actionModalCancel').onclick = null;
+      resolve(val);
+    };
+    $('#actionModalConfirm').onclick = () => cleanup(true);
+    $('#actionModalCancel').onclick = () => cleanup(false);
+  });
+}
+
+function showPromptModal(title, desc, defaultVal = '') {
+  return new Promise(resolve => {
+    $('#actionModalTitle').textContent = title;
+    $('#actionModalDesc').textContent = desc;
+    const inp = $('#actionModalInput');
+    inp.classList.remove('hide');
+    inp.value = defaultVal;
+    $('#actionModal').classList.remove('hide');
+    setTimeout(() => inp.focus(), 40);
+    const cleanup = val => {
+      $('#actionModal').classList.add('hide');
+      $('#actionModalConfirm').onclick = null;
+      $('#actionModalCancel').onclick = null;
+      resolve(val);
+    };
+    $('#actionModalConfirm').onclick = () => cleanup(inp.value);
+    $('#actionModalCancel').onclick = () => cleanup(null);
+  });
+}
+
 on('#newc', 'click', createNewChat);
-on('#clr', 'click', () => {
-  if (confirm('Supprimer cette discussion ?')) {
-    if (currentChatId) deleteChat(currentChatId);
-  }
+on('#clr', 'click', async () => {
+  const ok = await showConfirmModal('Supprimer la discussion', 'Voulez-vous vraiment supprimer cette conversation et tout son historique ?');
+  if (ok && currentChatId) deleteChat(currentChatId);
 });
 
 on('#chatSearch', 'input', e => {
@@ -1783,74 +2107,195 @@ on('#out', 'click', async () => {
 });
 
 function isArabic(text) {
-  return /[\u0600-\u06FF]/.test(text);
+  if (!text) return false;
+  const arCount = (text.match(/[\u0600-\u06FF]/g) || []).length;
+  const latCount = (text.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
+  return arCount > 8 && arCount >= latCount * 0.5;
 }
 
 function escapeHtml(s) {
-  return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
 }
+
+// Convert SVG data URI to crisp 2K PNG download via Canvas
+function downloadSvgAsPng(svgDataUrl, filename = 'nova_image_hd.png') {
+  const img = new Image();
+  img.onload = () => {
+    const scale = 2;
+    const w = (img.naturalWidth || 1024) * scale;
+    const h = (img.naturalHeight || 1024) * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      toast('Image PNG HD téléchargée !', '🎨');
+    }, 'image/png');
+  };
+  img.src = svgDataUrl;
+}
+
+// Safe global store for generated images & code snippets (avoids broken inline quotes)
+window._novaImageStore = new Map();
+window._novaCodeStore = new Map();
 
 function parseMarkdown(text) {
   if (!text) return '';
-  let esc = escapeHtml(text);
 
-  // Markdown Images : ![alt](src)
-  esc = esc.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)/g, (match, alt, src) => {
-    return `<div class="generated-image-card">
-      <div class="gen-img-wrap" onclick="openLightbox('${src}')">
-        <img src="${src}" alt="${alt}" loading="lazy" class="gen-img-preview" />
-        <div class="gen-img-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Image HD 4K</div>
-      </div>
-      <div class="gen-img-bar">
-        <span class="gen-img-title">${alt || 'Image HD générée par NOVA MK'}</span>
-        <div class="gen-img-actions">
-          <button class="m-act-btn" onclick="openLightbox('${src}')">🔍 Agrandir</button>
-          <a class="m-act-btn" href="${src}" download="nova_image_${Date.now()}.png" target="_blank">⬇ Télécharger</a>
-        </div>
-      </div>
-    </div>`;
+  const codeBlocks = [];
+  const inlineCodes = [];
+  const imageCards = [];
+
+  // 1. Protect fenced code blocks BEFORE escaping
+  let raw = String(text).replace(/```([a-zA-Z0-9_-]*)[ \t]*\r?\n([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    const codeId = 'code_' + Math.random().toString(36).slice(2, 9);
+    window._novaCodeStore.set(codeId, code.trim());
+    codeBlocks.push(
+      `<pre><button class="m-act-btn nova-copy-code" data-code-id="${codeId}" style="position:absolute;top:8px;right:8px">Copier</button><code>${escapeHtml(code.trim())}</code></pre>`
+    );
+    return `\n@@CODEBLOCK_${idx}@@\n`;
   });
 
-  // Markdown Links : [text](url)
+  // 2. Protect markdown images BEFORE escaping
+  raw = raw.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s\)]+|data:image\/[^\s\)]+)\)/g, (_, alt, src) => {
+    const idx = imageCards.length;
+    const imgId = 'img_' + Math.random().toString(36).slice(2, 9);
+    window._novaImageStore.set(imgId, src);
+    const isSvg = src.startsWith('data:image/svg+xml');
+    const safeAlt = escapeHtml(alt || 'Illustration NOVA MK');
+    imageCards.push(
+      `<div class="generated-image-card">
+        <div class="gen-img-wrap nova-zoom-img" data-img-id="${imgId}">
+          <img src="${src}" alt="${safeAlt}" loading="lazy" class="gen-img-preview" />
+          <div class="gen-img-badge">✨ NOVA Studio HD</div>
+        </div>
+        <div class="gen-img-bar">
+          <span class="gen-img-title">${safeAlt}</span>
+          <div class="gen-img-actions">
+            <button class="m-act-btn nova-zoom-img" data-img-id="${imgId}">🔍 Agrandir</button>
+            ${isSvg
+              ? `<button class="m-act-btn nova-dl-png" data-img-id="${imgId}">⬇ PNG HD</button>
+                 <a class="m-act-btn" href="${src}" download="nova_art_${Date.now()}.svg">⬇ SVG</a>`
+              : `<a class="m-act-btn" href="${src}" download="nova_img_${Date.now()}.png">⬇ PNG</a>`
+            }
+          </div>
+        </div>
+      </div>`
+    );
+    return `\n@@IMGCARD_${idx}@@\n`;
+  });
+
+  // 3. Protect inline code
+  raw = raw.replace(/`([^`\n]+)`/g, (_, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+    return `@@INLINECODE_${idx}@@`;
+  });
+
+  // 4. Escape HTML safely
+  let esc = escapeHtml(raw);
+
+  // 5. Markdown links
   esc = esc.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--blue);text-decoration:underline">$1</a>');
 
-  esc = esc.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    return `<pre><button class="m-act-btn" style="position:absolute;top:8px;right:8px" onclick="copyToClipboard(decodeURIComponent('${encodeURIComponent(code)}'))">Copier</button><code>${code.trim()}</code></pre>`;
-  });
+  // 6. Headings, horizontal rules & blockquotes
+  esc = esc.replace(/^### (.*$)/gim, '<h3 dir="auto">$1</h3>');
+  esc = esc.replace(/^## (.*$)/gim, '<h2 dir="auto">$1</h2>');
+  esc = esc.replace(/^# (.*$)/gim, '<h1 dir="auto">$1</h1>');
+  esc = esc.replace(/^---$/gim, '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">');
+  esc = esc.replace(/^&gt; (.*$)/gim, '<blockquote dir="auto">$1</blockquote>');
 
-  esc = esc.replace(/`([^`]+)`/g, '<code>$1</code>');
-  esc = esc.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  esc = esc.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  esc = esc.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  // 7. Bold & Italic
   esc = esc.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  esc = esc.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  esc = esc.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+  esc = esc.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 
+  // 8. Line-by-line block parser (Lists + Markdown Tables + Paragraphs)
   const lines = esc.split('\n');
-  let inUl = false, inOl = false, out = [];
-  
-  for (let l of lines) {
+  let inUl = false, inOl = false, inTable = false, tableHeaderDone = false;
+  const out = [];
+
+  const closeLists = () => {
+    if (inUl) { out.push('</ul>'); inUl = false; }
+    if (inOl) { out.push('</ol>'); inOl = false; }
+  };
+  const closeTable = () => {
+    if (inTable) { out.push('</tbody></table>'); inTable = false; tableHeaderDone = false; }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    const trimmed = l.trim();
+
+    if (/^@@(CODEBLOCK|IMGCARD)_\d+@@$/.test(trimmed)) {
+      closeLists();
+      closeTable();
+      out.push(trimmed);
+      continue;
+    }
+
+    // Markdown Table detection
+    if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 2) {
+      closeLists();
+      const cells = trimmed.slice(1, -1).split('|').map(c => c.trim());
+      if (cells.every(c => /^:?-{2,}:?$/.test(c))) {
+        tableHeaderDone = true;
+        continue;
+      }
+      if (!inTable) {
+        out.push('<table><thead><tr>' + cells.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>');
+        inTable = true;
+        tableHeaderDone = false;
+      } else {
+        out.push('<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>');
+      }
+      continue;
+    } else {
+      closeTable();
+    }
+
     const bullet = l.match(/^\s*[-*•]\s+(.*)/);
     const numList = l.match(/^\s*(\d+)\.\s+(.*)/);
 
     if (bullet) {
-      if (!inUl) { out.push('<ul>'); inUl = true; }
-      out.push('<li>' + bullet[1] + '</li>');
-    } else if (numList) {
-      if (!inOl) { out.push('<ol>'); inOl = true; }
-      out.push('<li>' + numList[2] + '</li>');
-    } else {
-      if (inUl) { out.push('</ul>'); inUl = false; }
       if (inOl) { out.push('</ol>'); inOl = false; }
-      if (l.trim()) {
-        out.push('<p>' + l + '</p>');
+      if (!inUl) { out.push('<ul dir="auto">'); inUl = true; }
+      out.push('<li dir="auto">' + bullet[1] + '</li>');
+    } else if (numList) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      if (!inOl) { out.push('<ol dir="auto">'); inOl = true; }
+      out.push('<li dir="auto">' + numList[2] + '</li>');
+    } else {
+      closeLists();
+      if (trimmed) {
+        if (/^<(h[1-3]|blockquote|hr)/.test(trimmed)) {
+          out.push(trimmed);
+        } else {
+          out.push('<p dir="auto">' + l + '</p>');
+        }
       }
     }
   }
-  if (inUl) out.push('</ul>');
-  if (inOl) out.push('</ol>');
+  closeLists();
+  closeTable();
 
-  return out.join('');
+  let html = out.join('');
+  html = html.replace(/@@CODEBLOCK_(\d+)@@/g, (_, i) => codeBlocks[i] || '');
+  html = html.replace(/@@IMGCARD_(\d+)@@/g, (_, i) => imageCards[i] || '');
+  html = html.replace(/@@INLINECODE_(\d+)@@/g, (_, i) => inlineCodes[i] || '');
+  return html;
 }
 
 function copyToClipboard(text) {
@@ -1860,6 +2305,28 @@ function copyToClipboard(text) {
     toast('Échec de la copie');
   });
 }
+
+// Event delegation for code copy, image lightbox, and 2K PNG download
+document.addEventListener('click', e => {
+  const copyBtn = e.target.closest('.nova-copy-code');
+  if (copyBtn) {
+    const code = window._novaCodeStore.get(copyBtn.dataset.codeId);
+    if (code !== undefined) copyToClipboard(code);
+    return;
+  }
+  const dlPngBtn = e.target.closest('.nova-dl-png');
+  if (dlPngBtn) {
+    e.stopPropagation();
+    const src = window._novaImageStore.get(dlPngBtn.dataset.imgId);
+    if (src) downloadSvgAsPng(src, `nova_art_${Date.now()}.png`);
+    return;
+  }
+  const zoomTarget = e.target.closest('.nova-zoom-img');
+  if (zoomTarget) {
+    const src = window._novaImageStore.get(zoomTarget.dataset.imgId);
+    if (src) openLightbox(src);
+  }
+});
 
 // ===== SYNTHÈSE VOCALE ROBUSTE (TEXT-TO-SPEECH) =====
 let currentAudioPlayingId = null;
@@ -2174,6 +2641,274 @@ function stopUniversalVoiceRecording() {
 
 on('#mic', 'click', () => startUniversalVoiceRecording('inp'));
 
+// ===== EXPORT PDF MULTI-PAGES HAUTE QUALITÉ (ARABE, FRANÇAIS, ANGLAIS, TABLEAUX, IMAGES) =====
+async function exportElementOrMarkdownToPdf(title, contentHtml, filenameBase = 'NOVA_Document') {
+  if (!window.html2canvas || !window.jspdf?.jsPDF) {
+    toast('Bibliothèque PDF en cours de chargement, réessayez…', '⏳');
+    return;
+  }
+  toast('Génération du fichier PDF en cours…', '📄');
+
+  const safeTitle = escapeHtml(title || 'Document NOVA MK');
+  const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const container = document.createElement('div');
+  container.style.cssText = [
+    'position:fixed', 'left:-10000px', 'top:0', 'width:794px',
+    'background:#ffffff', 'color:#0f172a', 'padding:44px 48px',
+    'font-family:"Plus Jakarta Sans","Cairo",sans-serif',
+    'font-size:13.5px', 'line-height:1.68', 'z-index:-1', 'box-sizing:border-box'
+  ].join(';');
+
+  container.innerHTML = `
+    <style>
+      .pdf-doc-wrap * { box-sizing: border-box; color: #0f172a; }
+      .pdf-doc-wrap h1 { font-size: 20px; font-weight: 800; margin: 14px 0 8px; color: #0f172a; }
+      .pdf-doc-wrap h2 { font-size: 16.5px; font-weight: 700; margin: 14px 0 6px; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+      .pdf-doc-wrap h3 { font-size: 14.5px; font-weight: 700; margin: 12px 0 5px; color: #2563eb; }
+      .pdf-doc-wrap p { margin: 0 0 8px; }
+      .pdf-doc-wrap ul, .pdf-doc-wrap ol { padding-inline-start: 22px; margin: 6px 0 10px; }
+      .pdf-doc-wrap li { margin-bottom: 4px; }
+      .pdf-doc-wrap blockquote { border-inline-start: 3px solid #2563eb; padding-inline-start: 12px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: 6px; }
+      .pdf-doc-wrap table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px; }
+      .pdf-doc-wrap th, .pdf-doc-wrap td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: start; }
+      .pdf-doc-wrap th { background: #f1f5f9; font-weight: 700; }
+      .pdf-doc-wrap pre { background: #0f172a; color: #f8fafc !important; padding: 12px; border-radius: 8px; overflow: hidden; white-space: pre-wrap; font-family: monospace; font-size: 11.5px; margin: 10px 0; }
+      .pdf-doc-wrap pre * { color: #f8fafc !important; }
+      .pdf-doc-wrap code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+      .pdf-doc-wrap pre code { background: none; padding: 0; }
+      .pdf-doc-wrap .m-act-btn, .pdf-doc-wrap .gen-img-bar, .pdf-doc-wrap .gen-img-badge { display: none !important; }
+      .pdf-doc-wrap .generated-image-card { border: 1px solid #e2e8f0; box-shadow: none; margin: 10px 0; }
+    </style>
+    <div class="pdf-doc-wrap">
+      <div style="border-bottom:2px solid #0f172a;padding-bottom:12px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:.18em;color:#2563eb;text-transform:uppercase">NOVA MK · Édition Professionnelle</div>
+          <div style="font-size:19px;font-weight:800;color:#0f172a;margin-top:3px">${safeTitle}</div>
+        </div>
+        <div style="font-size:11px;color:#64748b;text-align:right">${escapeHtml(dateStr)}<br>Med Rayen Bouazizi · CEO of MK</div>
+      </div>
+      <div>${contentHtml}</div>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+  try {
+    // Convert any SVG data URI images to raster PNG and await all images so html2canvas renders them cleanly
+    const imgs = Array.from(container.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => new Promise(resolve => {
+      img.removeAttribute('loading');
+      const finishLoad = () => {
+        if (img.src && img.src.startsWith('data:image/svg+xml')) {
+          try {
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth || 1024;
+            c.height = img.naturalHeight || 1024;
+            const cctx = c.getContext('2d');
+            cctx.drawImage(img, 0, 0, c.width, c.height);
+            img.src = c.toDataURL('image/png');
+          } catch (e) {}
+        }
+        resolve();
+      };
+      if (img.complete && img.naturalWidth > 0) {
+        finishLoad();
+      } else {
+        img.onload = finishLoad;
+        img.onerror = () => resolve();
+      }
+    })));
+    await new Promise(r => setTimeout(r, 120));
+    const canvas = await window.html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+
+    let heightLeft = imgH;
+    let position = 0;
+    const imgData = canvas.toDataURL('image/jpeg', 0.94);
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+    heightLeft -= pageH;
+
+    while (heightLeft > 2) {
+      position -= pageH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+      heightLeft -= pageH;
+    }
+
+    const cleanFile = String(filenameBase || 'NOVA_Document').replace(/[^a-zA-Z0-9À-ÿ_-]+/g, '_').slice(0, 48);
+    pdf.save(`${cleanFile}.pdf`);
+    toast('PDF téléchargé avec succès !', '📄');
+  } catch (err) {
+    console.error('PDF export error:', err);
+    toast('Erreur lors de la création du PDF : ' + err.message);
+  } finally {
+    container.remove();
+  }
+}
+
+function buildQcmPdfHtml(qcm, withAnswers = false) {
+  const letters = ['A', 'B', 'C', 'D'];
+  let html = `<p style="color:#475569;margin-bottom:14px"><strong>Matière :</strong> ${escapeHtml(qcm.subject || 'Général')} · <strong>Niveau :</strong> ${escapeHtml(qcm.level || 'Standard')} · <strong>Durée :</strong> ${qcm.durationMinutes || 20} min</p>`;
+  qcm.questions.forEach((q, idx) => {
+    html += `<div style="margin-bottom:14px;padding:12px;border:1px solid #cbd5e1;border-radius:8px;page-break-inside:avoid">
+      <div style="font-weight:700;margin-bottom:8px" dir="auto">${idx + 1}. ${escapeHtml(q.question)}</div>
+      <div style="display:grid;gap:4px">`;
+    (q.options || []).forEach((opt, oi) => {
+      const isRight = withAnswers && oi === q.correctIndex;
+      html += `<div dir="auto" style="padding:4px 8px;border-radius:5px;${isRight ? 'background:#dcfce7;font-weight:700;border:1px solid #16a34a' : ''}">
+        ${withAnswers ? (isRight ? '✅ ' : '⬜ ') : '☐ '}<strong>${letters[oi] || oi + 1}.</strong> ${escapeHtml(opt)}
+      </div>`;
+    });
+    html += `</div>`;
+    if (withAnswers && q.explanation) {
+      html += `<div dir="auto" style="margin-top:8px;padding:7px 10px;background:#f1f5f9;border-radius:6px;font-size:12px"><strong>Explication :</strong> ${escapeHtml(q.explanation)}</div>`;
+    }
+    html += `</div>`;
+  });
+  return html;
+}
+
+// ===== WIDGET QCM INTERACTIF DANS LE CHAT =====
+function buildQcmWidget(qcm) {
+  const card = document.createElement('div');
+  card.className = 'qcm-card';
+  if (isArabic(qcm.title + ' ' + (qcm.questions?.[0]?.question || ''))) {
+    card.setAttribute('dir', 'rtl');
+  }
+
+  const letters = ['A', 'B', 'C', 'D'];
+  const selections = new Array(qcm.questions.length).fill(null);
+  let graded = false;
+
+  const head = document.createElement('div');
+  head.className = 'qcm-head';
+  head.innerHTML = `
+    <div>
+      <h4>📝 ${escapeHtml(qcm.title || 'QCM Interactif')}</h4>
+      <div class="qcm-meta">${escapeHtml(qcm.subject || 'Général')} · ${escapeHtml(qcm.level || 'Standard')} · ${qcm.questions.length} questions · ⏱ ${qcm.durationMinutes || 15} min</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="m-act-btn qcm-pdf-sujet">📄 PDF Sujet</button>
+      <button class="m-act-btn qcm-pdf-corrige">📄 PDF + Corrigé</button>
+    </div>
+  `;
+  card.appendChild(head);
+
+  const qEls = [];
+  qcm.questions.forEach((item, qi) => {
+    const qBox = document.createElement('div');
+    qBox.className = 'qcm-q';
+
+    const qTitle = document.createElement('div');
+    qTitle.className = 'qcm-q-title';
+    qTitle.textContent = `${qi + 1}. ${item.question}`;
+    qBox.appendChild(qTitle);
+
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'qcm-opts';
+
+    const optBtns = [];
+    (item.options || []).forEach((optText, oi) => {
+      const btn = document.createElement('button');
+      btn.className = 'qcm-opt';
+      btn.type = 'button';
+      btn.innerHTML = `<span class="qcm-letter">${letters[oi] || oi + 1}</span><span>${escapeHtml(optText)}</span>`;
+      btn.onclick = () => {
+        if (graded) return;
+        selections[qi] = oi;
+        optBtns.forEach((b, idx) => b.classList.toggle('selected', idx === oi));
+      };
+      optBtns.push(btn);
+      optsWrap.appendChild(btn);
+    });
+
+    const expDiv = document.createElement('div');
+    expDiv.className = 'qcm-exp';
+    expDiv.innerHTML = `<strong>💡 Explication :</strong> ${escapeHtml(item.explanation || '')}`;
+
+    qBox.append(optsWrap, expDiv);
+    card.appendChild(qBox);
+    qEls.push({ optBtns, expDiv, correctIndex: item.correctIndex });
+  });
+
+  const footer = document.createElement('div');
+  footer.className = 'qcm-footer';
+  const scoreBanner = document.createElement('div');
+  scoreBanner.className = 'qcm-score-banner hide';
+  const btnGroup = document.createElement('div');
+  btnGroup.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+
+  const checkBtn = document.createElement('button');
+  checkBtn.className = 'btn';
+  checkBtn.style.cssText = 'width:auto;padding:9px 18px;font-size:13px';
+  checkBtn.textContent = '✅ Corriger mon QCM';
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'btn-o hide';
+  resetBtn.textContent = '↻ Recommencer';
+
+  checkBtn.onclick = () => {
+    graded = true;
+    let score = 0;
+    qEls.forEach((qObj, qi) => {
+      const picked = selections[qi];
+      if (picked === qObj.correctIndex) score++;
+      qObj.optBtns.forEach((b, oi) => {
+        b.disabled = true;
+        b.classList.remove('selected');
+        if (oi === qObj.correctIndex) b.classList.add('correct');
+        else if (picked === oi) b.classList.add('wrong');
+      });
+      qObj.expDiv.classList.add('show');
+    });
+    const total = qEls.length;
+    const note20 = ((score / total) * 20).toFixed(1);
+    const pct = Math.round((score / total) * 100);
+    scoreBanner.textContent = `Résultat : ${score}/${total} (${pct}% · ${note20}/20)`;
+    scoreBanner.classList.remove('hide');
+    checkBtn.classList.add('hide');
+    resetBtn.classList.remove('hide');
+  };
+
+  resetBtn.onclick = () => {
+    graded = false;
+    selections.fill(null);
+    qEls.forEach(qObj => {
+      qObj.optBtns.forEach(b => {
+        b.disabled = false;
+        b.classList.remove('selected', 'correct', 'wrong');
+      });
+      qObj.expDiv.classList.remove('show');
+    });
+    scoreBanner.classList.add('hide');
+    resetBtn.classList.add('hide');
+    checkBtn.classList.remove('hide');
+  };
+
+  btnGroup.append(checkBtn, resetBtn);
+  footer.append(scoreBanner, btnGroup);
+  card.appendChild(footer);
+
+  head.querySelector('.qcm-pdf-sujet').onclick = () =>
+    exportElementOrMarkdownToPdf(qcm.title || 'QCM', buildQcmPdfHtml(qcm, false), qcm.title || 'QCM_Sujet');
+  head.querySelector('.qcm-pdf-corrige').onclick = () =>
+    exportElementOrMarkdownToPdf((qcm.title || 'QCM') + ' — Corrigé', buildQcmPdfHtml(qcm, true), (qcm.title || 'QCM') + '_Corrige');
+
+  return card;
+}
+
 // ===== RENDU DES MESSAGES =====
 function renderMessageElement(m) {
   const wrap = document.createElement('div');
@@ -2186,11 +2921,31 @@ function renderMessageElement(m) {
   const bub = document.createElement('div');
   bub.className = 'bub';
 
-  // Pièces jointes / Photos
-  if (m.files && m.files.length) {
+  // Extract persisted QCM and metadata from files array
+  let qcmData = m.qcm || null;
+  let webSources = Array.isArray(m.sources) ? m.sources : [];
+  let nearbyPlaces = Array.isArray(m.places) ? m.places : [];
+  const normalFiles = [];
+
+  if (Array.isArray(m.files)) {
+    for (const f of m.files) {
+      if (f?.type === 'nova/qcm' && f.qcm) {
+        qcmData = f.qcm;
+      } else if (f?.type === 'nova/meta') {
+        if (Array.isArray(f.sources) && f.sources.length) webSources = f.sources;
+        if (Array.isArray(f.places) && f.places.length) nearbyPlaces = f.places;
+      } else if (f) {
+        normalFiles.push(f);
+      }
+    }
+  }
+
+  // Pièces jointes / Photos (skip duplicate if already embedded in Markdown)
+  const visibleFiles = normalFiles.filter(f => !(f.url && m.text && m.text.includes(f.url)));
+  if (visibleFiles.length) {
     const attWrap = document.createElement('div');
     attWrap.className = 'att';
-    m.files.forEach(f => {
+    visibleFiles.forEach(f => {
       if (f.url && f.type && f.type.startsWith('image/')) {
         const imgCard = document.createElement('div');
         imgCard.className = 'att-img';
@@ -2210,8 +2965,10 @@ function renderMessageElement(m) {
     bub.appendChild(attWrap);
   }
 
-  // Texte Markdown avec détection RTL
-  if (m.text) {
+  // Si c'est un QCM interactif structuré, on affiche le widget interactif
+  if (qcmData) {
+    bub.appendChild(buildQcmWidget(qcmData));
+  } else if (m.text) {
     const txt = document.createElement('div');
     txt.className = 'txt';
     if (isArabic(m.text)) {
@@ -2221,8 +2978,18 @@ function renderMessageElement(m) {
     bub.appendChild(txt);
   }
 
+  // Sources Web Grounding Google Search
+  if (webSources.length) {
+    const srcBox = document.createElement('div');
+    srcBox.className = 'sources-box';
+    srcBox.innerHTML = `<div class="sources-title">🌐 Sources Web Vérifiées</div><div class="sources-list">${
+      webSources.map(s => `<a class="source-link" href="${escapeHtml(s.uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title || s.uri)}</a>`).join('')
+    }</div>`;
+    bub.appendChild(srcBox);
+  }
+
   // Lieux médicaux proches si détectés
-  if (m.places && m.places.length) {
+  if (nearbyPlaces.length) {
     const placesDiv = document.createElement('div');
     placesDiv.className = 'places-box';
     placesDiv.innerHTML = `
@@ -2231,7 +2998,7 @@ function renderMessageElement(m) {
         Établissements de santé & Urgences à proximité
       </div>
     `;
-    m.places.forEach(p => {
+    nearbyPlaces.forEach(p => {
       const pRow = document.createElement('div');
       pRow.className = 'place-card';
       pRow.innerHTML = `
@@ -2239,7 +3006,7 @@ function renderMessageElement(m) {
           <b>${escapeHtml(p.name)}</b>
           <small>${escapeHtml(p.address)}</small>
         </div>
-        <a class="place-btn" href="${p.mapUrl}" target="_blank" rel="noopener">
+        <a class="place-btn" href="${escapeHtml(p.mapUrl)}" target="_blank" rel="noopener">
           Itinéraire GPS
         </a>
       `;
@@ -2249,7 +3016,7 @@ function renderMessageElement(m) {
   }
 
   // Actions sous message bot
-  if (m.role !== 'user' && m.text) {
+  if (m.role !== 'user' && (m.text || qcmData)) {
     const actions = document.createElement('div');
     actions.className = 'm-actions';
 
@@ -2258,6 +3025,21 @@ function renderMessageElement(m) {
     speakBtn.id = 'speak_' + m.id;
     speakBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg> Écouter`;
     speakBtn.onclick = () => speakTextVoice(m.text, m.id, m.lang);
+
+    const pdfBtn = document.createElement('button');
+    pdfBtn.className = 'm-act-btn';
+    pdfBtn.innerHTML = `📄 PDF`;
+    pdfBtn.title = 'Télécharger cette réponse en fichier PDF';
+    pdfBtn.onclick = () => {
+      if (qcmData) {
+        exportElementOrMarkdownToPdf((qcmData.title || 'QCM') + ' — Corrigé', buildQcmPdfHtml(qcmData, true), qcmData.title || 'QCM_NOVA');
+      } else {
+        const activeChat = chatsList.find(c => c.id === currentChatId);
+        const docTitle = m.docTitle || activeChat?.title || 'Document NOVA MK';
+        const htmlContent = `<div ${isArabic(m.text || '') ? 'dir="rtl"' : ''}>${parseMarkdown(m.text || '')}</div>`;
+        exportElementOrMarkdownToPdf(docTitle, htmlContent, docTitle);
+      }
+    };
 
     const watchSendBtn = document.createElement('button');
     watchSendBtn.className = 'm-act-btn';
@@ -2272,7 +3054,7 @@ function renderMessageElement(m) {
     copyBtn.innerHTML = `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copier`;
     copyBtn.onclick = () => copyToClipboard(m.text);
 
-    actions.append(speakBtn, watchSendBtn, copyBtn);
+    actions.append(speakBtn, pdfBtn, watchSendBtn, copyBtn);
 
     if (m.speedText) {
       const speedPill = document.createElement('span');
@@ -2298,31 +3080,46 @@ function renderMessages() {
     list.innerHTML = `
       <div class="empty">
         <div class="logo" style="font-size:38px"><span style="animation:none;opacity:1;transform:none;filter:none">NOVA</span></div>
-        <p>Assistant d'Élite & Compagnon Smart Watch développé par <b>Med Rayen Bouazizi, CEO of MK</b>. Recherche internet en direct, géolocalisation médicale d'urgence et synthèse vocale trilingue.</p>
+        <p>Assistant d'Élite propulsé par <b>Gemini 4 Hydrogen</b> · Développé par <b>Med Rayen Bouazizi, CEO of MK</b>. Créez des documents PDF, QCM interactifs, devoirs complets, illustrations HD et recherches web en direct.</p>
         <div class="sug">
-          <div class="sug-card" data-s="Trouve l'hôpital ou le cabinet médical d'urgence le plus proche de moi.">
+          <div class="sug-card" data-action="qcm">
+            <b>📝 Créer un QCM Interactif</b>
+            <small>Quiz avec correction instantanée, note /20 et export PDF</small>
+          </div>
+          <div class="sug-card" data-action="devoir">
+            <b>📚 Devoirs & Exercices</b>
+            <small>Crée ou résout un devoir complet étape par étape + PDF</small>
+          </div>
+          <div class="sug-card" data-action="doc">
+            <b>📄 Créer un Document PDF</b>
+            <small>Cours, fiches, rapports, dissertations, CV prêts à télécharger</small>
+          </div>
+          <div class="sug-card" data-action="img">
+            <b>🎨 Studio Image HD</b>
+            <small>Illustrations vectorielles HD téléchargeables en PNG 2K</small>
+          </div>
+          <div class="sug-card" data-s="Trouve l'hôpital ou la pharmacie d'urgence la plus proche de moi.">
             <b>🩺 Hôpital & Urgences</b>
-            <small>Localise les centres de soins et donne l'itinéraire</small>
+            <small>Localise les centres de soins et donne l'itinéraire GPS</small>
           </div>
-          <div class="sug-card" data-s="Recherche sur internet les dernières avancées médicales et scientifiques de cette année.">
-            <b>🌐 Recherche Internet</b>
-            <small>Recherche approfondie en direct sur le web</small>
-          </div>
-          <div class="sug-card" data-s="ما هي أقرب عيادة أو صيدلية طوارئ وكيف أتعامل مع الصداع الحاد؟">
-            <b>🏥 استشارة وطوارئ بالعربية</b>
-            <small>إجابة صوتية فصحى مع تحديد أقرب مركز طبي</small>
-          </div>
-          <div class="sug-card" data-s="Explique-moi les principes de synchronisation BLE avec ma Smart Watch.">
-            <b>⌚ Smart Watch & BLE</b>
-            <small>Liaison temps réel entre le téléphone et la montre</small>
+          <div class="sug-card" data-s="Recherche sur internet les dernières avancées scientifiques et technologiques récentes.">
+            <b>🌐 Recherche Google Live</b>
+            <small>Informations d'actualité en direct avec sources vérifiées</small>
           </div>
         </div>
       </div>
     `;
     list.querySelectorAll('.sug-card').forEach(c => {
       c.onclick = () => {
-        $('#inp').value = c.dataset.s;
-        sendMessage();
+        const act = c.dataset.action;
+        if (act === 'qcm') $('#qcmStudioModal')?.classList.remove('hide');
+        else if (act === 'devoir') $('#devoirStudioModal')?.classList.remove('hide');
+        else if (act === 'doc') $('#docStudioModal')?.classList.remove('hide');
+        else if (act === 'img') $('#imgStudioModal')?.classList.remove('hide');
+        else if (c.dataset.s) {
+          $('#inp').value = c.dataset.s;
+          sendMessage();
+        }
       };
     });
     return;
@@ -2427,7 +3224,7 @@ function openLightbox(url) {
 on('#imgModalClose', 'click', () => $('#imgModal')?.classList.remove('on'));
 on('#imgModal', 'click', e => { if (e.target === $('#imgModal')) $('#imgModal')?.classList.remove('on'); });
 
-// ===== ENVOI DE MESSAGE (AVEC RECHERCHE INTERNET & SMART WATCH) =====
+// ===== ENVOI DE MESSAGE AVEC STREAMING SSE TEMPS RÉEL =====
 async function sendMessage(customText = null) {
   unlockAudioMobile();
   if (isBusy) return;
@@ -2452,7 +3249,6 @@ async function sendMessage(customText = null) {
   currentMessages.push(tempUserMsg);
   renderMessages();
 
-  // Indicateur d'écriture
   isBusy = true;
   $('#send').disabled = true;
   const list = $('#list');
@@ -2461,43 +3257,111 @@ async function sendMessage(customText = null) {
   botWrap.innerHTML = `
     <div class="av">N</div>
     <div class="bub">
-      <div class="txt"><div class="dots"><span></span><span></span><span></span></div></div>
+      <div class="txt" id="streamLiveTxt"><div class="dots"><span></span><span></span><span></span></div></div>
     </div>
   `;
   list.appendChild(botWrap);
   scrollMessagesToBottom();
 
-  // Notification immédiate sur l'écran physique de la montre connectée
   if (bleConnectedDevice) {
-    sendTextToRealSmartWatch('Recherche NOVA MK en cours…', false);
+    sendTextToRealSmartWatch('Analyse NOVA MK en cours…', false);
   }
 
-  try {
-    const payload = {
-      chatId: currentChatId,
-      text,
-      files: currentFiles.map(f => ({ name: f.name, type: f.type, data: f.data, url: f.url })),
-      model: SETTINGS.model || 'gemini-2.5-flash',
-      temp: parseFloat(SETTINGS.temp) || 0.7,
-      tokens: parseInt(SETTINGS.tokens) || 2048,
-      location: userCoordinates,
-      webSearch: !!SETTINGS.webSearch
-    };
+  const payload = {
+    chatId: currentChatId,
+    text,
+    files: currentFiles.map(f => ({ name: f.name, type: f.type, data: f.data, url: f.url })),
+    model: SETTINGS.model || 'gemini-4-hydrogen',
+    powerMode: SETTINGS.powerMode || 'max',
+    location: userCoordinates,
+    webSearch: !!SETTINGS.webSearch
+  };
 
-    const res = await api('POST', '/api/chat', payload);
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = localStorage.getItem('nova_jwt');
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const resp = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const errJson = await resp.json().catch(() => ({}));
+      throw new Error(errJson.error || `Erreur serveur (${resp.status})`);
+    }
+
+    let streamedText = '';
+    let donePayload = null;
+
+    if (!resp.body) {
+      donePayload = await api('POST', '/api/chat', payload);
+    } else {
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamError = null;
+      const liveEl = botWrap.querySelector('#streamLiveTxt');
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+          const lines = block.split('\n');
+          let evtName = 'message';
+          let dataStr = '';
+          for (const l of lines) {
+            if (l.startsWith('event:')) evtName = l.slice(6).trim();
+            else if (l.startsWith('data:')) dataStr += l.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let parsed = {};
+          try { parsed = JSON.parse(dataStr); } catch(e) { continue; }
+
+          if (evtName === 'chunk' && parsed.delta) {
+            streamedText += parsed.delta;
+            if (liveEl) {
+              if (isArabic(streamedText)) liveEl.setAttribute('dir', 'rtl');
+              else liveEl.removeAttribute('dir');
+              liveEl.innerHTML = parseMarkdown(streamedText);
+              scrollMessagesToBottom();
+            }
+          } else if (evtName === 'done') {
+            donePayload = parsed;
+          } else if (evtName === 'error') {
+            streamError = parsed.error || 'Erreur lors du traitement.';
+          }
+        }
+      }
+
+      if (streamError && !donePayload) {
+        throw new Error(streamError);
+      }
+    }
+
+    const res = donePayload || { text: streamedText };
     botWrap.remove();
 
-    const speedSec = res.durationMs ? `${(res.durationMs / 1000).toFixed(1)}s` : '0.6s';
-    const modelLabel = (res.modelUsed || 'gemini-2.5-flash').replace('gemini-', '');
+    const speedSec = res.durationMs ? `${(res.durationMs / 1000).toFixed(1)}s` : '1.0s';
+    const modelLabel = (res.modelUsed || SETTINGS.model || 'gemini-4-hydrogen').replace('gemini-', '');
 
     const botMsg = {
       id: res.botMsgId || ('b_' + Date.now()),
       role: 'bot',
-      text: res.text,
+      text: res.text || streamedText,
+      qcm: res.qcm || null,
+      files: res.files || [],
       imageUrl: res.imageUrl,
       speechSummary: res.speechSummary,
       lang: res.detectedLang,
       places: res.nearbyPlaces || [],
+      sources: res.webSources || [],
       speedText: `${speedSec} • ${modelLabel}`
     };
     currentMessages.push(botMsg);
@@ -2513,13 +3377,9 @@ async function sendMessage(customText = null) {
 
     lastSpeechSummary = res?.speechSummary || res?.text || '';
     lastSpeechLang = res?.detectedLang || 'fr';
-
-    // Affichage direct sur l'écran physique de la vraie Smart Watch connectée par Bluetooth
     if (lastSpeechSummary) {
       sendTextToRealSmartWatch(lastSpeechSummary, true);
     }
-
-    // Lecture audio manuelle : l'utilisateur clique sur « Écouter » sur le message pour entendre la voix
   } catch (err) {
     botWrap.remove();
     currentMessages.push({
@@ -2529,7 +3389,7 @@ async function sendMessage(customText = null) {
     });
     renderMessages();
     if (bleConnectedDevice) {
-      sendTextToRealSmartWatch('Erreur recherche : ' + err.message, false);
+      sendTextToRealSmartWatch('Erreur : ' + err.message, false);
     }
   } finally {
     isBusy = false;
@@ -2913,7 +3773,21 @@ $$('.aspect-btn').forEach(b => {
 
 on('#bGenImg', 'click', () => $('#imgStudioModal')?.classList.remove('hide'));
 on('#btnTopGenImg', 'click', () => $('#imgStudioModal')?.classList.remove('hide'));
+on('#openImgStudioQuick', 'click', () => $('#imgStudioModal')?.classList.remove('hide'));
 on('#imgStudioClose', 'click', () => $('#imgStudioModal')?.classList.add('hide'));
+on('#bGeo', 'click', () => requestUserLocation(false));
+
+// Power mode selector in composer
+$$('.power-opt').forEach(btn => {
+  btn.onclick = () => {
+    SETTINGS.powerMode = btn.dataset.power || 'max';
+    saveSettingsLocally();
+    applySettings();
+    api('PUT', '/api/settings', { settings: SETTINGS }).catch(() => {});
+    const labels = { fast: 'Mode Rapide activé', balanced: 'Mode Équilibré activé', max: 'Puissance Max (XHIGH) activée' };
+    toast(labels[SETTINGS.powerMode] || 'Mode mis à jour', '⚡');
+  };
+});
 
 on('#btnDoGenImage', 'click', async () => {
   const prompt = ($('#imgStudioPrompt')?.value || '').trim();
@@ -2921,7 +3795,7 @@ on('#btnDoGenImage', 'click', async () => {
 
   const btn = $('#btnDoGenImage');
   btn.disabled = true;
-  btn.textContent = '✨ Création de votre image HD en cours…';
+  btn.textContent = '✨ Création de votre illustration HD en cours…';
   const resArea = $('#studioResultArea');
   if (resArea) {
     resArea.style.display = 'block';
@@ -2936,32 +3810,40 @@ on('#btnDoGenImage', 'click', async () => {
     });
 
     if (resArea && data.imageUrl) {
+      const imgId = 'studio_' + Date.now();
+      window._novaImageStore.set(imgId, data.imageUrl);
       resArea.innerHTML = `
         <div class="generated-image-card" style="max-width:100%">
-          <div class="gen-img-wrap" onclick="openLightbox('${data.imageUrl}')">
-            <img src="${data.imageUrl}" alt="${prompt}" class="gen-img-preview" />
+          <div class="gen-img-wrap nova-zoom-img" data-img-id="${imgId}">
+            <img src="${data.imageUrl}" alt="${escapeHtml(prompt)}" class="gen-img-preview" />
           </div>
           <div class="gen-img-bar">
-            <span class="gen-img-title">${prompt}</span>
+            <span class="gen-img-title">${escapeHtml(prompt)}</span>
             <div class="gen-img-actions">
-              <button class="m-act-btn" onclick="openLightbox('${data.imageUrl}')">🔍 Agrandir</button>
-              <a class="m-act-btn" href="${data.imageUrl}" download="nova_image_${Date.now()}.png" target="_blank">⬇ Télécharger</a>
+              <button class="m-act-btn nova-zoom-img" data-img-id="${imgId}">🔍 Agrandir</button>
+              <button class="m-act-btn nova-dl-png" data-img-id="${imgId}">⬇ PNG HD</button>
+              <a class="m-act-btn" href="${data.imageUrl}" download="nova_art_${Date.now()}.svg">⬇ SVG</a>
             </div>
           </div>
         </div>
       `;
     }
 
-    currentMessages.push({
-      id: data.botMsgId || ('b_' + Date.now()),
-      role: 'bot',
-      text: data.text || `![${prompt}](${data.imageUrl})`
-    });
-    renderMessages();
-    toast('Image HD générée avec succès !', '🎨');
+    if (data.chatId && data.chatId !== currentChatId) {
+      currentChatId = data.chatId;
+      await loadChats();
+    } else {
+      currentMessages.push({
+        id: data.botMsgId || ('b_' + Date.now()),
+        role: 'bot',
+        text: data.text || `![${prompt}](${data.imageUrl})`
+      });
+      renderMessages();
+    }
+    toast('Illustration HD générée avec succès !', '🎨');
   } catch(err) {
     if (resArea) {
-      resArea.innerHTML = `<div class="alert-box on">${err.message || 'Erreur lors de la génération'}</div>`;
+      resArea.innerHTML = `<div class="alert-box on">${escapeHtml(err.message || 'Erreur lors de la génération')}</div>`;
     }
   } finally {
     btn.disabled = false;
@@ -2969,7 +3851,157 @@ on('#btnDoGenImage', 'click', async () => {
   }
 });
 
-// VUE A4
+// ===== STUDIO CRÉATION DOCUMENT & PDF =====
+on('#openDocStudio', 'click', () => $('#docStudioModal')?.classList.remove('hide'));
+on('#btnTopGenDoc', 'click', () => $('#docStudioModal')?.classList.remove('hide'));
+on('#docStudioClose', 'click', () => $('#docStudioModal')?.classList.add('hide'));
+
+on('#btnDoGenDoc', 'click', async () => {
+  const docType = $('#docStudioType')?.value || 'Document';
+  const language = $('#docStudioLang')?.value || 'Français';
+  const title = ($('#docStudioTitle')?.value || '').trim();
+  const instructions = ($('#docStudioInstr')?.value || '').trim();
+  if (!title && !instructions && !pendingFiles.length) {
+    return toast('Saisissez un titre ou des instructions');
+  }
+
+  const btn = $('#btnDoGenDoc');
+  btn.disabled = true;
+  btn.textContent = '⏳ Rédaction experte en cours…';
+
+  const currentFiles = [...pendingFiles];
+  pendingFiles = [];
+  renderAttachmentChips();
+
+  try {
+    const data = await api('POST', '/api/generate-document', {
+      docType,
+      title,
+      instructions,
+      language,
+      files: currentFiles.map(f => ({ name: f.name, type: f.type, data: f.data, url: f.url })),
+      chatId: currentChatId
+    });
+    $('#docStudioModal')?.classList.add('hide');
+    currentChatId = data.chatId || currentChatId;
+    await selectChat(currentChatId);
+    const chats = await api('GET', '/api/chats');
+    chatsList = chats;
+    renderHistory();
+
+    // Déclenche automatiquement le téléchargement PDF du document généré
+    const docTitle = data.docTitle || title || docType;
+    const htmlContent = `<div ${isArabic(data.text || '') ? 'dir="rtl"' : ''}>${parseMarkdown(data.text || '')}</div>`;
+    await exportElementOrMarkdownToPdf(docTitle, htmlContent, docTitle);
+  } catch (err) {
+    toast(err.message || 'Erreur création document');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📄 Générer le Document & Exporter PDF';
+  }
+});
+
+// ===== STUDIO QCM INTERACTIF =====
+on('#openQcmStudio', 'click', () => $('#qcmStudioModal')?.classList.remove('hide'));
+on('#qcmStudioClose', 'click', () => $('#qcmStudioModal')?.classList.add('hide'));
+
+on('#btnDoGenQcm', 'click', async () => {
+  const subject = ($('#qcmStudioSubject')?.value || '').trim();
+  const level = $('#qcmStudioLevel')?.value || 'Lycée';
+  const count = parseInt($('#qcmStudioCount')?.value || '8', 10);
+  const language = $('#qcmStudioLang')?.value || 'Français';
+  const topic = ($('#qcmStudioTopic')?.value || '').trim();
+  if (!topic && !pendingFiles.length) {
+    return toast('Précisez un thème ou joignez un cours PDF/photo');
+  }
+
+  const btn = $('#btnDoGenQcm');
+  btn.disabled = true;
+  btn.textContent = '⏳ Création du QCM interactif…';
+
+  const currentFiles = [...pendingFiles];
+  pendingFiles = [];
+  renderAttachmentChips();
+
+  try {
+    const data = await api('POST', '/api/generate-qcm', {
+      subject,
+      level,
+      count,
+      language,
+      topic,
+      files: currentFiles.map(f => ({ name: f.name, type: f.type, data: f.data, url: f.url })),
+      chatId: currentChatId
+    });
+    $('#qcmStudioModal')?.classList.add('hide');
+    currentChatId = data.chatId || currentChatId;
+    await selectChat(currentChatId);
+    chatsList = await api('GET', '/api/chats');
+    renderHistory();
+    toast('QCM interactif prêt ! Cochez vos réponses.', '📝');
+  } catch (err) {
+    toast(err.message || 'Erreur création QCM');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📝 Générer le QCM Interactif (+ Export PDF)';
+  }
+});
+
+// ===== STUDIO DEVOIRS & EXERCICES =====
+let devoirStudioMode = 'create';
+on('#openDevoirStudio', 'click', () => $('#devoirStudioModal')?.classList.remove('hide'));
+on('#devoirStudioClose', 'click', () => $('#devoirStudioModal')?.classList.add('hide'));
+on('#devModeCreate', 'click', () => {
+  devoirStudioMode = 'create';
+  $('#devModeCreate')?.classList.add('on');
+  $('#devModeSolve')?.classList.remove('on');
+});
+on('#devModeSolve', 'click', () => {
+  devoirStudioMode = 'solve';
+  $('#devModeSolve')?.classList.add('on');
+  $('#devModeCreate')?.classList.remove('on');
+});
+
+on('#btnDoGenDevoir', 'click', async () => {
+  const subject = ($('#devStudioSubject')?.value || 'Mathématiques').trim();
+  const level = $('#devStudioLevel')?.value || 'Lycée';
+  const language = $('#devStudioLang')?.value || 'Français';
+  const topic = ($('#devStudioTopic')?.value || '').trim();
+  if (!topic && !pendingFiles.length) {
+    return toast('Décrivez le devoir ou joignez une photo/PDF de l’énoncé');
+  }
+
+  const btn = $('#btnDoGenDevoir');
+  btn.disabled = true;
+  btn.textContent = '⏳ Raisonnement approfondi en cours…';
+
+  const currentFiles = [...pendingFiles];
+  pendingFiles = [];
+  renderAttachmentChips();
+
+  try {
+    const data = await api('POST', '/api/generate-devoir', {
+      mode: devoirStudioMode,
+      subject,
+      level,
+      language,
+      topic,
+      files: currentFiles.map(f => ({ name: f.name, type: f.type, data: f.data, url: f.url })),
+      chatId: currentChatId
+    });
+    $('#devoirStudioModal')?.classList.add('hide');
+    currentChatId = data.chatId || currentChatId;
+    await selectChat(currentChatId);
+    chatsList = await api('GET', '/api/chats');
+    renderHistory();
+    toast('Devoir traité avec succès ! Cliquez sur 📄 PDF pour l’exporter.', '📚');
+  } catch (err) {
+    toast(err.message || 'Erreur lors du traitement du devoir');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📚 Lancer avec Puissance Maximale';
+  }
+});
 
 // VUE A4
 on('#a4Btn', 'click', () => {
@@ -2982,6 +4014,12 @@ on('#a4Close', 'click', () => {
   if (a) a.classList.add('hide');
 });
 on('#a4Print', 'click', () => window.print());
+on('#a4DownloadPdf', 'click', () => {
+  const activeChat = chatsList.find(c => c.id === currentChatId);
+  const title = activeChat?.title || 'Document NOVA MK';
+  const html = $('#a4Body')?.innerHTML || '';
+  exportElementOrMarkdownToPdf(title, html, title);
+});
 
 function renderA4Document() {
   const body = $('#a4Body');
@@ -2999,7 +4037,7 @@ function renderA4Document() {
     const isAr = isArabic(m.text || '');
     html += `<div class="a4-page" ${isAr ? 'dir="rtl"' : ''}>
       <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">
-        ${m.role === 'user' ? (currentUser?.name || 'Vous') : 'NOVA (MK Edition)'}
+        ${m.role === 'user' ? escapeHtml(currentUser?.name || 'Vous') : 'NOVA (MK Edition)'}
       </div>
       <div style="font-size:14px;line-height:1.7">${parseMarkdown(m.text || '')}</div>
     </div>`;
@@ -3024,6 +4062,14 @@ on('#setModel', 'change', e => {
   applySettings();
   api('PUT', '/api/settings', { model: e.target.value }).catch(() => {});
   toast('Modèle activé : ' + e.target.options[e.target.selectedIndex].text);
+});
+
+on('#setPowerMode', 'change', e => {
+  SETTINGS.powerMode = e.target.value;
+  saveSettingsLocally();
+  applySettings();
+  api('PUT', '/api/settings', { settings: SETTINGS }).catch(() => {});
+  toast('Profondeur de raisonnement mise à jour');
 });
 
 on('#setAutoVoice', 'click', () => {
@@ -3053,11 +4099,6 @@ on('#setVoiceLang', 'change', e => {
   }
 });
 
-on('#setTemp', 'input', e => {
-  SETTINGS.temp = parseFloat(e.target.value) || 0.7;
-  saveSettingsLocally();
-});
-
 on('#setTheme', 'change', e => {
   SETTINGS.theme = e.target.value;
   saveSettingsLocally();
@@ -3071,9 +4112,9 @@ on('#setAnim', 'click', () => {
   saveSettingsLocally();
 });
 
-// Modification nom
+// Modification nom (via modal sans window.prompt)
 on('#btnChangeName', 'click', async () => {
-  const newName = prompt('Entrez votre nouveau nom complet :', currentUser?.name || '');
+  const newName = await showPromptModal('Modifier votre nom', 'Entrez votre nouveau nom complet :', currentUser?.name || '');
   if (!newName || !newName.trim()) return;
   try {
     await api('PUT', '/api/settings', { name: newName.trim() });
