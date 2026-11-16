@@ -225,7 +225,8 @@ app.post('/api/register', limit(15, 36e5), async (q, r) => {
         email,
         name,
         model: DEFAULT_MODEL,
-        settings: defaultSettings
+        settings: defaultSettings,
+        watch: null
       }
     });
   } catch (e) {
@@ -256,6 +257,11 @@ app.post('/api/login', limit(25, 9e5), (q, r) => {
   } catch (e) {}
   userSettings.model = normalizeModelName(userSettings.model || u.model);
 
+  let userWatch = null;
+  try {
+    userWatch = u.watch ? JSON.parse(u.watch) : null;
+  } catch (e) {}
+
   return r.json({
     ok: true,
     token,
@@ -264,7 +270,8 @@ app.post('/api/login', limit(25, 9e5), (q, r) => {
       email: u.email,
       name: u.name || email.split('@')[0],
       model: normalizeModelName(u.model),
-      settings: userSettings
+      settings: userSettings,
+      watch: userWatch
     }
   });
 });
@@ -282,12 +289,18 @@ app.get('/api/me', auth, (q, r) => {
   } catch (e) {}
   userSettings.model = normalizeModelName(userSettings.model || u.model);
 
+  let userWatch = null;
+  try {
+    userWatch = u.watch ? JSON.parse(u.watch) : null;
+  } catch (e) {}
+
   r.json({
     id: u.id,
     email: u.email,
     name: u.name || u.email.split('@')[0],
     model: normalizeModelName(u.model),
-    settings: userSettings
+    settings: userSettings,
+    watch: userWatch
   });
 });
 
@@ -318,6 +331,20 @@ app.put('/api/settings', auth, (q, r) => {
     const clean = { ...settings, model: normalizeModelName(settings.model) };
     db.prepare('UPDATE users SET settings=? WHERE id=?').run(JSON.stringify(clean).slice(0, 8000), q.u.id);
   }
+  r.json({ ok: true });
+});
+
+// ===== LIAISON COMPTE <-> SMARTWATCH RÉELLE (BLUETOOTH BLE) =====
+app.put('/api/watch', auth, (q, r) => {
+  const name = String(q.body.name || 'Smart Watch Bluetooth').trim().slice(0, 80);
+  const bleId = String(q.body.bleId || '').trim().slice(0, 120);
+  const watchObj = { name, bleId, linkedAt: Date.now() };
+  db.prepare('UPDATE users SET watch=? WHERE id=?').run(JSON.stringify(watchObj), q.u.id);
+  r.json({ ok: true, watch: watchObj });
+});
+
+app.delete('/api/watch', auth, (q, r) => {
+  db.prepare('UPDATE users SET watch=? WHERE id=?').run(null, q.u.id);
   r.json({ ok: true });
 });
 
@@ -425,6 +452,30 @@ async function findNearbyPlaces(lat, lon, query = 'hospital clinic pharmacy') {
     return [];
   }
 }
+
+app.get('/api/location/label', auth, async (q, r) => {
+  try {
+    const lat = parseFloat(q.query.lat);
+    const lon = parseFloat(q.query.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return r.status(400).json({ error: 'Coordonnées invalides.' });
+    }
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=fr`;
+    const resp = await fetch(url, {
+      signal: AbortSignal.timeout(2500),
+      headers: { 'User-Agent': 'NOVA-MK-Assistant/3.0' }
+    });
+    if (!resp.ok) return r.json({ city: '', country: '', label: '' });
+    const data = await resp.json();
+    const addr = data?.address || {};
+    const city = addr.city || addr.town || addr.village || addr.municipality || addr.state || '';
+    const country = addr.country || '';
+    const label = [city, country].filter(Boolean).join(', ');
+    r.json({ city, country, label });
+  } catch (e) {
+    r.json({ city: '', country: '', label: '' });
+  }
+});
 
 // ===== HELPERS ERREURS GEMINI & EXTRACTION SOURCES =====
 
@@ -626,20 +677,23 @@ async function generateHighQualityImage(prompt, aspectRatio = '1:1', referenceFi
   else if (ar === '4:3') { width = 1024; height = 768; }
   else if (ar === '3:4') { width = 768; height = 1024; }
 
-  const svgPrompt = `Tu es un directeur artistique et illustrateur vectoriel SVG d'élite mondiale.
-Crée une illustration SVG autonome époustouflante, riche, très détaillée et esthétique représentant : "${cleanPrompt}".
+  const svgPrompt = `Tu es un maître illustrateur vectoriel et directeur artistique de niveau international.
+Génère une illustration SVG autonome d'une qualité visuelle exceptionnelle, riche en détails, profondeurs, lumières et textures, représentant : "${cleanPrompt}".
 ${referenceFiles.length ? "Inspire-toi fidèlement de l'image ou du document joint pour construire ou transformer cette illustration." : ''}
 
-RÈGLES TECHNIQUES STRICTES :
+EXIGENCES ARTISTIQUES & TECHNIQUES STRICTES :
 1. Balise racine exacte : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"> ... </svg>
-2. Utilise des dégradés riches (<linearGradient>, <radialGradient>), des filtres lumineux ou d'ombre (<filter> avec feGaussianBlur / feDropShadow), de nombreuses formes composées (<path>, <circle>, <ellipse>, <polygon>, <rect>) en couches successives (arrière-plan atmosphérique, plan intermédiaire, sujet principal très détaillé, reflets et particules lumineuses).
-3. Sois fidèle au sujet demandé (personnages, animaux, paysages, objets scientifiques, schémas, architecture, scène futuriste, etc.) avec de vraies proportions artistiques, des ombres et lumières cohérentes.
-4. XML STRICTEMENT VALIDE : n'utilise JAMAIS le caractère "&" nu (écris "&amp;"), pas de balises <script>, pas de <foreignObject>, pas de lien <image href="http...">.
-5. N'ajoute PAS de texte parasite ou de filigrane sauf si la description demande explicitement du texte.
-6. Réponds STRICTEMENT et UNIQUEMENT avec le code SVG brut commençant par <svg et finissant par </svg>, sans balises markdown \`\`\` et sans explication.`;
+2. Composition multi-couches riche (au moins 25 à 60 éléments vectoriels soignés) :
+   - Arrière-plan atmosphérique travaillé avec <linearGradient> et <radialGradient> harmonieux.
+   - Plan intermédiaire avec reliefs, architecture, atmosphère ou décor cohérent.
+   - Sujet principal très détaillé avec courbes de Bézier organiques (<path>), volumes, ombres portées, reflets spéculaires et accents lumineux (<filter> feGaussianBlur / feDropShadow).
+3. Respecte fidèlement le sujet, l'anatomie ou la géométrie demandée, sans texte ni titre ni filigrane (sauf si l'utilisateur demande explicitement du texte dans l'image).
+4. XML STRICTEMENT VALIDE : n'utilise JAMAIS "&" nu (écris "&amp;"), aucun <script>, aucun <foreignObject>, aucun lien externe <image href="http...">.
+5. Réponds UNIQUEMENT avec le code SVG brut de <svg à </svg>, sans balises markdown \`\`\` et sans aucun texte autour.`;
 
   const parts = [...buildFileParts(referenceFiles), { text: svgPrompt }];
   const imageCandidateModels = [
+    { model: DEFAULT_MODEL, config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM } } },
     { model: DEFAULT_MODEL, config: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } },
     { model: 'gemini-3.1-flash-lite', config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } }
   ];
@@ -679,45 +733,7 @@ RÈGLES TECHNIQUES STRICTES :
     throw lastAuthErr;
   }
 
-  // Fallback graphique vectoriel stylisé et XML-safe si la réponse n'a pas pu être parsée
-  const safeTitle = cleanPrompt.slice(0, 48).replace(/[<>&"']/g, c => ({
-    '<': '&lt;',
-    '>': '&gt;',
-    '&': '&amp;',
-    '"': '&quot;',
-    "'": '&apos;'
-  }[c]));
-  const proceduralSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
-    <defs>
-      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#070b16"/>
-        <stop offset="50%" stop-color="#111a2e"/>
-        <stop offset="100%" stop-color="#05070c"/>
-      </linearGradient>
-      <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#3b82f6"/>
-        <stop offset="50%" stop-color="#8b5cf6"/>
-        <stop offset="100%" stop-color="#06b6d4"/>
-      </linearGradient>
-      <radialGradient id="halo" cx="50%" cy="45%" r="50%">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.42"/>
-        <stop offset="100%" stop-color="#070b16" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <rect width="${width}" height="${height}" fill="url(#bg)"/>
-    <circle cx="${width / 2}" cy="${height * 0.45}" r="${Math.min(width, height) * 0.42}" fill="url(#halo)"/>
-    <rect x="${width * 0.08}" y="${height * 0.12}" width="${width * 0.84}" height="${height * 0.76}" rx="28" fill="#0d1424" stroke="url(#glow)" stroke-width="2.5" fill-opacity="0.9"/>
-    <circle cx="${width / 2}" cy="${height * 0.4}" r="76" fill="url(#glow)" fill-opacity="0.18" stroke="url(#glow)" stroke-width="2.5"/>
-    <path d="M ${width / 2 - 48} ${height * 0.45} L ${width / 2 - 12} ${height * 0.36} L ${width / 2 + 16} ${height * 0.42} L ${width / 2 + 48} ${height * 0.33} L ${width / 2 + 54} ${height * 0.46} Z" fill="url(#glow)" opacity="0.85"/>
-    <circle cx="${width / 2 - 22}" cy="${height * 0.35}" r="9" fill="#f8fafc" opacity="0.9"/>
-    <text x="${width / 2}" y="${height * 0.64}" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="middle">${safeTitle}</text>
-    <text x="${width / 2}" y="${height * 0.71}" font-family="system-ui, sans-serif" font-size="14" font-weight="500" fill="#94a3b8" text-anchor="middle">NOVA MK · Studio Créatif</text>
-  </svg>`;
-  return {
-    imageUrl: `data:image/svg+xml;base64,${Buffer.from(proceduralSvg, 'utf8').toString('base64')}`,
-    modelUsed: DEFAULT_MODEL,
-    isFallback: true
-  };
+  throw new Error('La génération visuelle n’a pas pu être finalisée. Réessayez avec une description plus précise.');
 }
 
 // ===== GÉNÉRATEUR DE QCM STRUCTURÉ (JSON SCHEMA) =====
@@ -907,17 +923,20 @@ function ensureChatExists(chatId, uid, titleSeed) {
   return currentChatId;
 }
 
-// ===== TRANSCRIPTION AUDIO =====
+// ===== TRANSCRIPTION AUDIO & SYNTHÈSE VOCALE GEMINI =====
 
 app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
   try {
     const audioData = q.body.audio;
-    const mimeType = q.body.mimeType || 'audio/webm';
+    const mimeType = String(q.body.mimeType || 'audio/webm').split(';')[0].trim();
     if (!audioData) return r.status(400).json({ error: 'Fichier audio manquant.' });
 
     let rawData = String(audioData);
     if (rawData.includes(';base64,')) rawData = rawData.split(';base64,')[1];
     rawData = rawData.trim();
+    if (!rawData || rawData.length < 40) {
+      return r.status(400).json({ error: 'Enregistrement audio trop court ou vide.' });
+    }
 
     const ai = getAiClient();
     if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant sur le serveur.' });
@@ -933,22 +952,81 @@ app.post('/api/transcribe', auth, limit(60, 6e4), async (q, r) => {
               parts: [
                 { inlineData: { mimeType, data: rawData } },
                 {
-                  text: 'Tu es un transcripteur vocal expert multilingue (français, arabe, anglais). Retranscris avec une précision irréprochable les propos enregistrés. Ne retourne strictement QUE le texte exact prononcé, sans commentaire.'
+                  text: 'Transcribe the exact spoken words in this audio faithfully in their original language (French, Arabic including dialect/MSA, or English). Return ONLY the exact transcribed text, with zero commentary or quotes.'
                 }
               ]
             }
           ]
         });
-        transcript = resp.text?.trim() || '';
+        transcript = (resp.text || '').trim().replace(/^["«]|["»]$/g, '').trim();
         if (transcript) break;
       } catch (err) {
         console.warn(`Transcribe model ${m} failed:`, err.message);
       }
     }
-    return r.json({ ok: true, transcript });
+    const detectedLang = transcript ? detectLanguage(transcript) : 'fr';
+    return r.json({ ok: true, transcript, detectedLang });
   } catch (e) {
     console.error('Transcribe error:', e);
-    return r.status(500).json({ error: 'Erreur lors de la transcription vocale.' });
+    return r.status(500).json({ error: 'Erreur lors de la compréhension vocale.' });
+  }
+});
+
+app.post('/api/tts', auth, limit(60, 6e4), async (q, r) => {
+  try {
+    const rawText = String(q.body.text || '').trim();
+    const lang = String(q.body.lang || 'fr');
+    const friendMode = !!q.body.friendMode;
+    if (!rawText) return r.status(400).json({ error: 'Texte manquant.' });
+
+    const cleanText = rawText
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '')
+      .replace(/[#*`_>|!\[\]\(\)]/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 650);
+
+    if (!cleanText) return r.status(400).json({ error: 'Aucun texte lisible.' });
+
+    const ai = getAiClient();
+    if (!ai) return r.status(500).json({ error: 'GEMINI_API_KEY manquant.' });
+
+    const style = friendMode
+      ? (lang === 'ar' ? 'Warm, friendly, natural Arabic companion' : lang === 'en' ? 'Warm, friendly, natural companion' : 'Chaleureux, amical, naturel et bienveillant en français')
+      : (lang === 'ar' ? 'Clear, expressive Arabic assistant' : lang === 'en' ? 'Clear, expressive assistant' : 'Clair, fluide et professionnel en français');
+
+    const response = await generateWithRetry(
+      ai,
+      {
+        model: 'gemini-3.8-flash-lite-tts',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: cleanText, speechMetadata: { style } }]
+          }
+        ],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' }
+            }
+          }
+        }
+      },
+      25000
+    );
+
+    const base64Audio = response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) {
+      return r.status(502).json({ error: 'Audio TTS indisponible.' });
+    }
+    return r.json({ ok: true, audioDataUrl: `data:audio/wav;base64,${base64Audio}` });
+  } catch (e) {
+    console.warn('TTS error:', e.message);
+    return r.status(500).json({ error: 'TTS indisponible' });
   }
 });
 
@@ -1273,6 +1351,9 @@ async function prepareChatContext(q) {
   const requestedModel = normalizeModelName(q.body.model || q.u.model || DEFAULT_MODEL);
   const powerMode = String(q.body.powerMode || 'max');
   const userLoc = q.body.location;
+  const locationLabel = String(q.body.locationLabel || '').trim();
+  const friendMode = !!q.body.friendMode;
+  const fromWatch = !!q.body.fromWatch;
   const isExplicitWebSearch = q.body.webSearch !== false;
 
   const currentChatId = ensureChatExists(chatId, q.u.id, text || 'Analyse document');
@@ -1284,13 +1365,17 @@ async function prepareChatContext(q) {
     );
   const needsSearch =
     isExplicitWebSearch &&
-    /actualit|nouvelle|météo|weather|news|recherche|cherche|internet|web|derni[èe]re|aujourd'hui|2025|2026|prix|cours|résultat|score|أخبار|طقس|بحث|ابحث/.test(
+    /actualit|nouvelle|météo|weather|temps qu|news|recherche|cherche|internet|web|derni[èe]re|aujourd'hui|maintenant|qui est|quel est|combien|2025|2026|prix|cours|résultat|score|horaire|ouvert|proche|pr[èe]s d|restaurant|pharmacie|أخبار|طقس|بحث|ابحث|كم|متى|أين/.test(
       lowerText
     );
   const urlsInPrompt = text.match(/https?:\/\/[^\s<>"']+/g) || [];
 
   let nearbyPlaces = [];
   let enrichedContext = '';
+
+  if (userLoc?.lat && userLoc?.lng) {
+    enrichedContext += `\n[POSITION GPS AUTOMATIQUE DU TÉLÉPHONE : ${locationLabel ? locationLabel + ' · ' : ''}(${Number(userLoc.lat).toFixed(4)}, ${Number(userLoc.lng).toFixed(4)})]`;
+  }
 
   if (needsMedical) {
     nearbyPlaces = await findNearbyPlaces(userLoc?.lat, userLoc?.lng, 'hopital urgence clinique pharmacie');
@@ -1341,6 +1426,17 @@ async function prepareChatContext(q) {
       text
     );
 
+  const baseSystemPrompt = friendMode || fromWatch
+    ? `${NOVA_SYSTEM_PROMPT}
+
+MODE COMPAGNON AMI & MONTRE CONNECTÉE ACTIF :
+- L'utilisateur s'adresse à toi comme à un ami proche et fidèle (${q.u.name || 'mon ami'}).
+- Détecte automatiquement sa langue (français, arabe, dialecte maghrébin compris avec réponse en arabe clair, ou anglais) et réponds dans CETTE MÊME LANGUE.
+- Sois chaleureux, empathique, naturel, humain et direct — parfait pour être affiché sur l'écran de sa vraie montre connectée et prononcé à voix haute.
+- Tu connais sa position GPS automatique depuis son téléphone (${locationLabel || 'position active'}) : utilise-la naturellement s'il demande la météo, un lieu, une heure locale ou une aide à proximité.
+- Si une recherche web est effectuée sur le téléphone, synthétise l'essentiel clairement et agréablement sans listes interminables.`
+    : NOVA_SYSTEM_PROMPT;
+
   return {
     text,
     files,
@@ -1353,7 +1449,10 @@ async function prepareChatContext(q) {
     contents,
     isPdfRequest,
     isImagePrompt,
-    isAutoQcmPrompt
+    isAutoQcmPrompt,
+    friendMode,
+    fromWatch,
+    baseSystemPrompt
   };
 }
 
@@ -1497,7 +1596,7 @@ app.post('/api/chat/stream', auth, limit(60, 6e4), async (q, r) => {
 
     for (const modelCandidate of candidateModels) {
       try {
-        const config = buildGeminiConfig(modelCandidate, NOVA_SYSTEM_PROMPT, {
+        const config = buildGeminiConfig(modelCandidate, ctx.baseSystemPrompt, {
           powerMode: ctx.powerMode,
           useSearch: ctx.needsSearch,
           urlsInPrompt: ctx.urlsInPrompt
@@ -1558,11 +1657,14 @@ app.post('/api/chat/stream', auth, limit(60, 6e4), async (q, r) => {
       extraFiles
     );
 
+    const speechSummary = buildSpeechSummary(outputText);
+    const detectedLang = detectLanguage(outputText);
     sendEvent('done', {
       ok: true,
       text: outputText,
-      speechSummary: buildSpeechSummary(outputText),
-      detectedLang: detectLanguage(outputText),
+      speechSummary,
+      watchText: speechSummary ? `✨ NOVA : ${speechSummary.slice(0, 140)}` : '',
+      detectedLang,
       nearbyPlaces: ctx.nearbyPlaces,
       webSources,
       isPdfReady: ctx.isPdfRequest,
@@ -1669,7 +1771,7 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
 
     for (const modelCandidate of candidateModels) {
       try {
-        const config = buildGeminiConfig(modelCandidate, NOVA_SYSTEM_PROMPT, {
+        const config = buildGeminiConfig(modelCandidate, ctx.baseSystemPrompt, {
           powerMode: ctx.powerMode,
           useSearch: ctx.needsSearch,
           urlsInPrompt: ctx.urlsInPrompt
@@ -1714,11 +1816,14 @@ app.post('/api/chat', auth, limit(60, 6e4), async (q, r) => {
       extraFiles
     );
 
+    const speechSummary = buildSpeechSummary(outputText);
+    const detectedLang = detectLanguage(outputText);
     return r.json({
       ok: true,
       text: outputText,
-      speechSummary: buildSpeechSummary(outputText),
-      detectedLang: detectLanguage(outputText),
+      speechSummary,
+      watchText: speechSummary ? `✨ NOVA : ${speechSummary.slice(0, 140)}` : '',
+      detectedLang,
       nearbyPlaces: ctx.nearbyPlaces,
       webSources,
       isPdfReady: ctx.isPdfRequest,

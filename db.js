@@ -127,6 +127,7 @@ class SimpleDB {
             verified: 1,
             model: String(model || 'gemini-4-hydrogen'),
             settings: String(settings || '{}'),
+            watch: null,
             created: Number(created || Date.now())
           });
           lastInsertRowid = id;
@@ -215,6 +216,18 @@ class SimpleDB {
           const u = db.data.users.find(user => user.id === Number(id));
           if (u) {
             u.settings = String(settings);
+            changes = 1;
+            db.save();
+          }
+          return { changes, lastInsertRowid: 0 };
+        }
+
+        // UPDATE users watch
+        if (s.includes('UPDATE users SET watch=? WHERE id=?')) {
+          const [watch, id] = params;
+          const u = db.data.users.find(user => user.id === Number(id));
+          if (u) {
+            u.watch = watch ? String(watch) : null;
             changes = 1;
             db.save();
           }
