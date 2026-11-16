@@ -1428,7 +1428,7 @@ button:active:not(:disabled) { transform: scale(0.98); }
 
 <!-- ===== MODAL LIAISON SMART WATCH BLUETOOTH RÉELLE (AUCUN DESSIN DE MONTRE) ===== -->
 <div class="modal hide" id="btPanel">
-  <div class="modal-card" style="max-width:620px">
+  <div class="modal-card" style="max-width:640px">
     <div class="modal-head">
       <h3>Smart Watch Bluetooth (Appareil Réel)</h3>
       <button class="icon-btn" id="btClose">
@@ -1437,6 +1437,11 @@ button:active:not(:disabled) { transform: scale(0.98); }
     </div>
 
     <div class="modal-body">
+      <div class="info-banner hide" id="watchEnvAlert" style="display:flex;flex-direction:column;gap:8px">
+        <span id="watchEnvAlertMsg"></span>
+        <a id="openStandaloneWatchLink" class="btn-primary hide" href="/" target="_blank" rel="noopener" style="width:fit-content;text-decoration:none">Ouvrir NOVA en plein écran</a>
+      </div>
+
       <div class="hw-status-row">
         <div style="min-width:0">
           <b id="watchStatusTitle" style="display:block;font-size:14.5px">Aucune montre associée à ce compte</b>
@@ -1471,9 +1476,18 @@ button:active:not(:disabled) { transform: scale(0.98); }
         <button class="toggle on" id="toggleWatchFriendMode" aria-label="Activer le mode ami"></button>
       </div>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn-primary" id="btnWatchVoiceSearch" style="flex:1">Parler avec ma montre (Vocal)</button>
-        <button class="btn-outline" id="btnEnableSysNotif" style="flex:1">Activer Relais Écran OS</button>
+      <div class="field hide" id="audioOutputField">
+        <label for="audioOutputSelect">Haut-parleur de sortie (Montre Audio Bluetooth / Téléphone)</label>
+        <div style="display:flex;gap:8px">
+          <select id="audioOutputSelect" style="flex:1"></select>
+          <button class="btn-outline" id="btnRefreshAudioOut" type="button">Actualiser</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" id="btnWatchVoiceSearch" style="flex:1;min-width:170px">Parler avec ma montre (Vocal)</button>
+        <button class="btn-outline" id="btnEnableSysNotif" style="flex:1;min-width:160px">Activer Relais Écran OS</button>
+        <button class="btn-outline" id="btnTestWatchDelayed" style="flex:1;min-width:160px" title="Envoie une alerte dans 4s pour tester écran éteint">Test écran éteint (4s)</button>
       </div>
 
       <div class="field">
@@ -1482,6 +1496,9 @@ button:active:not(:disabled) { transform: scale(0.98); }
           <input type="text" id="watchCustomInput" placeholder="Ex : Salut NOVA, quel temps fait-il ici ?">
           <button class="btn-outline" id="btnSendCustomToWatch">Transmettre</button>
         </div>
+        <small style="color:var(--fg-muted);font-size:11.5px;line-height:1.45">
+          Astuce montre réelle : activez les notifications Chrome dans l'application de votre montre (Mi Fitness, Galaxy Wearable, Zepp, Huawei Health) et connectez l'Audio Bluetooth de la montre dans les réglages Bluetooth du téléphone pour entendre la voix sur son haut-parleur.
+        </small>
       </div>
 
       <div class="field">
@@ -2395,15 +2412,87 @@ document.addEventListener('click', e => {
 on('#imgModalClose', 'click', () => $('#imgModal')?.classList.remove('on'));
 on('#imgModal', 'click', e => { if (e.target === $('#imgModal')) $('#imgModal')?.classList.remove('on'); });
 
-// ===== SYNTHÈSE VOCALE (GEMINI TTS + FALLBACK NAVIGATEUR) =====
+// ===== SYNTHÈSE VOCALE (AUDIO PRÉ-DÉVERROUILLÉ + GEMINI TTS + ROUTAGE BLUETOOTH) =====
 let currentAudioPlayingId = null;
 let activeHtmlAudio = null;
 let activeSpeechToken = 0;
+let unlockAudioCtx = null;
+let selectedAudioSinkId = localStorage.getItem('nova_audio_sink') || '';
+const sharedAudioEl = new Audio();
+sharedAudioEl.playsInline = true;
+sharedAudioEl.preload = 'auto';
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+
+function unlockAudioNow() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      if (!unlockAudioCtx) unlockAudioCtx = new AC();
+      if (unlockAudioCtx.state === 'suspended') unlockAudioCtx.resume().catch(() => {});
+      const buf = unlockAudioCtx.createBuffer(1, 1, 22050);
+      const src = unlockAudioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(unlockAudioCtx.destination);
+      src.start(0);
+    }
+  } catch (e) {}
+  try {
+    if (!activeHtmlAudio || sharedAudioEl.paused) {
+      sharedAudioEl.src = SILENT_WAV;
+      const p = sharedAudioEl.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    }
+  } catch (e) {}
+  try {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.resume();
+    }
+  } catch (e) {}
+}
+
+async function refreshAudioOutputDevices() {
+  const field = $('#audioOutputField');
+  const sel = $('#audioOutputSelect');
+  if (!field || !sel || !navigator.mediaDevices?.enumerateDevices || typeof sharedAudioEl.setSinkId !== 'function') return;
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const outs = devs.filter(d => d.kind === 'audiooutput');
+    if (!outs.length) return;
+    sel.innerHTML = '';
+    outs.forEach((d, idx) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || (idx === 0 ? 'Sortie système / Bluetooth active' : `Sortie audio ${idx + 1}`);
+      if (d.deviceId === selectedAudioSinkId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    field.classList.remove('hide');
+  } catch (e) {}
+}
+
+on('#audioOutputSelect', 'change', async e => {
+  selectedAudioSinkId = e.target.value || '';
+  localStorage.setItem('nova_audio_sink', selectedAudioSinkId);
+  if (typeof sharedAudioEl.setSinkId === 'function' && selectedAudioSinkId) {
+    try {
+      await sharedAudioEl.setSinkId(selectedAudioSinkId);
+      logWatchEvent('Sortie audio définie sur le périphérique sélectionné.', 'ok');
+      toast('Sortie audio mise à jour');
+    } catch (err) {
+      logWatchEvent('Changement sortie audio bloqué : ' + err.message, 'warn');
+    }
+  }
+});
+on('#btnRefreshAudioOut', 'click', () => {
+  unlockAudioNow();
+  refreshAudioOutputDevices();
+});
 
 function stopSpeaking() {
   activeSpeechToken++;
   if (activeHtmlAudio) {
-    try { activeHtmlAudio.pause(); activeHtmlAudio = null; } catch (e) {}
+    try { activeHtmlAudio.pause(); activeHtmlAudio.currentTime = 0; activeHtmlAudio = null; } catch (e) {}
   }
   if ('speechSynthesis' in window) {
     try { window.speechSynthesis.cancel(); } catch (e) {}
@@ -2460,13 +2549,16 @@ async function speakTextVoice(text, msgId = null, explicitLang = null) {
       });
       if (myToken !== activeSpeechToken) return;
       if (ttsRes.audioDataUrl) {
-        const audio = new Audio(ttsRes.audioDataUrl);
-        activeHtmlAudio = audio;
-        audio.onended = () => stopSpeaking();
-        audio.onerror = () => {
-          if (myToken === activeSpeechToken) speakBrowserFallback(cleanText, langShort);
+        if (typeof sharedAudioEl.setSinkId === 'function' && selectedAudioSinkId) {
+          try { await sharedAudioEl.setSinkId(selectedAudioSinkId); } catch (e) {}
+        }
+        sharedAudioEl.src = ttsRes.audioDataUrl;
+        sharedAudioEl.onended = () => { if (myToken === activeSpeechToken) stopSpeaking(); };
+        sharedAudioEl.onerror = () => {
+          if (myToken === activeSpeechToken) speakBrowserFallback(cleanText, langShort, myToken);
         };
-        await audio.play();
+        activeHtmlAudio = sharedAudioEl;
+        await sharedAudioEl.play();
         return;
       }
     } catch (e) {
@@ -2474,24 +2566,49 @@ async function speakTextVoice(text, msgId = null, explicitLang = null) {
       // Fallback smoothly to browser speechSynthesis
     }
   }
-  if (myToken === activeSpeechToken) speakBrowserFallback(cleanText, langShort);
+  if (myToken === activeSpeechToken) speakBrowserFallback(cleanText, langShort, myToken);
 }
 
-function speakBrowserFallback(cleanText, langShort) {
+function speakBrowserFallback(cleanText, langShort, myToken) {
   if (!('speechSynthesis' in window)) {
     stopSpeaking();
     return;
   }
+  try { window.speechSynthesis.cancel(); } catch (e) {}
+  try { window.speechSynthesis.resume(); } catch (e) {}
   const langCode = langShort === 'ar' ? 'ar-SA' : (langShort === 'en' ? 'en-US' : 'fr-FR');
-  const utt = new SpeechSynthesisUtterance(cleanText);
-  utt.lang = langCode;
-  utt.rate = 1.02;
-  const voices = window.speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang === langCode) || voices.find(v => v.lang.startsWith(langShort));
-  if (match) utt.voice = match;
-  utt.onend = () => stopSpeaking();
-  utt.onerror = () => stopSpeaking();
-  window.speechSynthesis.speak(utt);
+
+  const doSpeak = () => {
+    if (myToken !== undefined && myToken !== activeSpeechToken) return;
+    const utt = new SpeechSynthesisUtterance(cleanText);
+    utt.lang = langCode;
+    utt.rate = 1.02;
+    const voices = window.speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang === langCode) || voices.find(v => v.lang.startsWith(langShort));
+    if (match) utt.voice = match;
+    utt.onend = () => { if (myToken === undefined || myToken === activeSpeechToken) stopSpeaking(); };
+    utt.onerror = ev => {
+      if (ev?.error === 'not-allowed') {
+        logWatchEvent('Lecture vocale bloquée par le navigateur : cliquez sur « Écouter ».', 'warn');
+        toast('Appuyez sur « Écouter » pour activer la voix.');
+      }
+      if (myToken === undefined || myToken === activeSpeechToken) stopSpeaking();
+    };
+    window.speechSynthesis.speak(utt);
+  };
+
+  if (window.speechSynthesis.getVoices().length > 0) {
+    doSpeak();
+  } else {
+    let fired = false;
+    const once = () => {
+      if (fired) return;
+      fired = true;
+      doSpeak();
+    };
+    window.speechSynthesis.addEventListener?.('voiceschanged', once, { once: true });
+    setTimeout(once, 250);
+  }
 }
 
 // ===== ENREGISTREMENT VOCAL FIABLE (COMPTE OBLIGATOIRE, AUDIO -> GEMINI TRANSCRIBE) =====
@@ -2623,9 +2740,9 @@ function finishVoiceRecording() {
   mediaRecorder.stop();
 }
 
-on('#mic', 'click', () => startVoiceRecording(null));
+on('#mic', 'click', () => { unlockAudioNow(); startVoiceRecording(null); });
 on('#btnCancelRec', 'click', cancelVoiceRecording);
-on('#btnFinishRec', 'click', finishVoiceRecording);
+on('#btnFinishRec', 'click', () => { unlockAudioNow(); finishVoiceRecording(); });
 
 // ===== RENDU DES MESSAGES =====
 function buildQcmWidget(qcm) {
@@ -2824,7 +2941,7 @@ function renderMessageElement(m) {
     spk.className = 'msg-act';
     spk.id = 'speak_' + m.id;
     spk.textContent = 'Écouter';
-    spk.onclick = () => speakTextVoice(m.text, m.id, m.lang);
+    spk.onclick = () => { unlockAudioNow(); speakTextVoice(m.text, m.id, m.lang); };
 
     const pdf = document.createElement('button');
     pdf.className = 'msg-act';
@@ -3112,12 +3229,12 @@ async function sendMessage(customText = null, fromWatch = false) {
     }
     renderMessages();
 
-    // Relais vers la vraie Smart Watch & lecture vocale si activée / demande montre
+    // Relais vers la vraie Smart Watch & lecture vocale si activée / montre liée / demande montre
     const watchSummary = res.watchText || res.speechSummary || res.text || '';
     if (watchSummary && (bleConnectedDevice || currentUser?.watch || fromWatch)) {
       sendTextToRealSmartWatch(watchSummary, true);
     }
-    if ((SETTINGS.autoVoice || fromWatch) && (res.speechSummary || res.text)) {
+    if ((SETTINGS.autoVoice || fromWatch || bleConnectedDevice) && (res.speechSummary || res.text)) {
       speakTextVoice(res.speechSummary || res.text, botMsg.id, res.detectedLang);
     }
   } catch (err) {
@@ -3130,9 +3247,9 @@ async function sendMessage(customText = null, fromWatch = false) {
   }
 }
 
-on('#send', 'click', () => sendMessage());
+on('#send', 'click', () => { unlockAudioNow(); sendMessage(); });
 on('#inp', 'keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); unlockAudioNow(); sendMessage(); }
 });
 on('#inp', 'input', e => {
   e.target.style.height = 'auto';
@@ -3144,10 +3261,51 @@ let bleConnectedDevice = null;
 let bleGattServer = null;
 let bleUartCharacteristic = null;
 let bleAlertNotificationChar = null;
+let bleAlertControlChar = null;
 let bleImmediateAlertChar = null;
 let bleCurrentTimeChar = null;
 let bleWritableCharacteristics = [];
+let bleDiscoveredServicesCount = 0;
 let swRegistration = null;
+
+function isEmbeddedIframe() {
+  try { return window.self !== window.top; } catch (e) { return true; }
+}
+
+function updateWatchEnvBanner() {
+  const banner = $('#watchEnvAlert');
+  const msg = $('#watchEnvAlertMsg');
+  const link = $('#openStandaloneWatchLink');
+  if (!banner || !msg || !link) return;
+  link.href = window.location.href;
+  const inIframe = isEmbeddedIframe();
+  const notifPerm = ('Notification' in window) ? Notification.permission : 'unsupported';
+
+  if (inIframe) {
+    msg.textContent = 'Important : l’aperçu intégré bloque les notifications système nécessaires pour afficher les messages sur les montres commerciales (Samsung, Xiaomi, Huawei, Apple Watch). Ouvrez NOVA directement dans Chrome en plein écran.';
+    link.classList.remove('hide');
+    banner.classList.remove('hide');
+  } else if (notifPerm === 'denied') {
+    msg.textContent = 'Notifications Chrome bloquées : autorisez les notifications dans le cadenas à côté de l’adresse web, puis activez Chrome dans l’application de votre montre.';
+    link.classList.add('hide');
+    banner.classList.remove('hide');
+  } else if (notifPerm === 'default') {
+    msg.textContent = 'Pour afficher les messages sur l’écran de votre montre, cliquez sur « Activer Relais Écran OS » et autorisez les notifications Chrome.';
+    link.classList.add('hide');
+    banner.classList.remove('hide');
+  } else {
+    banner.classList.add('hide');
+  }
+}
+
+function toBleSafeAscii(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function logWatchEvent(msg, level = 'info') {
   const el = $('#watchLogConsole');
@@ -3174,12 +3332,12 @@ function getAttractiveWatchGreeting() {
   const loc = userLocationLabel ? ` à ${userLocationLabel}` : '';
   const lang = SETTINGS.voiceLang || 'auto';
   if (lang.startsWith('ar')) {
-    return `✨ نوفا · أهلاً ${firstName}! أنا معك${loc ? ' في ' + userLocationLabel : ''}. تحدّث معي كصديق في أي وقت.`;
+    return `نوفا · أهلاً ${firstName}! أنا معك${loc ? ' في ' + userLocationLabel : ''}. تحدّث معي كصديق في أي وقت.`;
   }
   if (lang.startsWith('en')) {
-    return `✨ NOVA · Hey ${firstName}! Connected with you${userLocationLabel ? ' in ' + userLocationLabel : ''}. Talk to me anytime, I'm your friend.`;
+    return `NOVA · Hey ${firstName}! Connected with you${userLocationLabel ? ' in ' + userLocationLabel : ''}. Talk to me anytime, I'm your friend.`;
   }
-  return `✨ NOVA · Salut ${firstName} ! Ravi d'être avec toi${loc}. Parle-moi quand tu veux, je suis ton ami.`;
+  return `NOVA · Salut ${firstName} ! Ravi d'être avec toi${loc}. Parle-moi quand tu veux, je suis ton ami.`;
 }
 
 async function bleWritePacket(characteristic, bytes) {
@@ -3207,13 +3365,16 @@ async function processWatchService(service) {
       if (ch.properties.write || ch.properties.writeWithoutResponse) {
         if (!bleWritableCharacteristics.some(x => x.uuid === ch.uuid)) bleWritableCharacteristics.push(ch);
       }
-      if (cuuid.includes('6e400002') || cuuid.includes('ffe1') || cuuid.includes('fff2') || cuuid.includes('00000002')) {
+      if (cuuid.includes('6e400002') || cuuid.includes('ffe1') || cuuid.includes('fff2') || cuuid.includes('00000002') || cuuid.includes('ffe9')) {
         bleUartCharacteristic = ch;
-        logWatchEvent('Canal série UART prêt pour votre montre.', 'ok');
+        logWatchEvent('Canal série UART BLE prêt (' + cuuid.slice(4, 8) + ').', 'ok');
       }
       if (cuuid.includes('2a46')) {
         bleAlertNotificationChar = ch;
         logWatchEvent('Service Alert Notification (0x2A46) détecté.', 'ok');
+      }
+      if (cuuid.includes('2a44')) {
+        bleAlertControlChar = ch;
       }
       if (cuuid.includes('2a06')) {
         bleImmediateAlertChar = ch;
@@ -3253,12 +3414,15 @@ async function processWatchService(service) {
 }
 
 async function pairSmartWatchBle() {
+  unlockAudioNow();
   if (!requireAccount('Créez un compte pour associer votre montre Bluetooth.')) return;
   requestUserLocation(true);
   await ensureWatchServiceWorker();
-  if ('Notification' in window && Notification.permission !== 'granted') {
+  if ('Notification' in window && Notification.permission === 'default' && !isEmbeddedIframe()) {
     try { await Notification.requestPermission(); } catch (e) {}
   }
+  updateWatchEnvBanner();
+
   if (!navigator.bluetooth) {
     logWatchEvent('Web Bluetooth indisponible dans ce navigateur (utilisez Chrome/Edge HTTPS). Le relais OS reste actif.', 'warn');
     toast('Ouvrez dans Chrome HTTPS pour le Bluetooth direct.');
@@ -3269,13 +3433,23 @@ async function pairSmartWatchBle() {
     logWatchEvent('Scan Bluetooth en cours…');
     const optionalWatchServices = [
       'alert_notification', 'immediate_alert', 'battery_service', 'heart_rate', 'device_information', 'current_time',
+      'generic_access', 'generic_attribute',
       '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
       '0000fee0-0000-1000-8000-00805f9b34fb',
       '0000fee1-0000-1000-8000-00805f9b34fb',
+      '0000fee7-0000-1000-8000-00805f9b34fb',
       '0000fe86-0000-1000-8000-00805f9b34fb',
+      '0000faa0-0000-1000-8000-00805f9b34fb',
       '0000ffe0-0000-1000-8000-00805f9b34fb',
+      '0000ffe5-0000-1000-8000-00805f9b34fb',
       '0000fff0-0000-1000-8000-00805f9b34fb',
-      0x1811, 0x1802, 0x180f, 0x180d, 0x1805, 0xfee0, 0xfe86, 0xffe0, 0xfff0
+      '0000ff00-0000-1000-8000-00805f9b34fb',
+      '0000fea0-0000-1000-8000-00805f9b34fb',
+      '0000fd00-0000-1000-8000-00805f9b34fb',
+      '7905f431-b5ce-4e99-a40f-4b1e122d00d0',
+      'f0080001-0451-4000-b000-000000000000',
+      'bae80001-4f05-4503-8e65-3af1f7329d1f',
+      0x1811, 0x1802, 0x180f, 0x180d, 0x1805, 0x180a, 0xfee0, 0xfee1, 0xfee7, 0xfe86, 0xffe0, 0xfff0, 0xff00
     ];
 
     const device = await navigator.bluetooth.requestDevice({
@@ -3289,17 +3463,26 @@ async function pairSmartWatchBle() {
     bleWritableCharacteristics = [];
     bleUartCharacteristic = null;
     bleAlertNotificationChar = null;
+    bleAlertControlChar = null;
     bleImmediateAlertChar = null;
     bleCurrentTimeChar = null;
+    bleDiscoveredServicesCount = 0;
 
     const server = await device.gatt.connect();
     bleGattServer = server;
-    logWatchEvent(`Connecté à ${watchName}.`, 'ok');
+    logWatchEvent(`Connecté à ${watchName} (BLE GATT).`, 'ok');
 
     try {
       const svcs = await server.getPrimaryServices();
+      bleDiscoveredServicesCount = svcs.length;
       for (const s of svcs) await processWatchService(s);
-    } catch (e) {}
+      logWatchEvent(`Services détectés : ${svcs.length} · Canaux écriture BLE : ${bleWritableCharacteristics.length}.`);
+      if (!bleWritableCharacteristics.length) {
+        logWatchEvent('Cette montre protège ses écrans contre l’écriture BLE directe : utilisez « Activer Relais Écran OS » (ou ouvrez en plein écran) pour pousser les messages sur la montre.', 'warn');
+      }
+    } catch (e) {
+      logWatchEvent('Lecture des services BLE restreinte par la montre : utilisation du Relais OS.', 'warn');
+    }
 
     if (bleCurrentTimeChar) {
       try {
@@ -3319,11 +3502,16 @@ async function pairSmartWatchBle() {
       updateUserChrome();
     });
 
-    // Save watch attachment to user account
+    // Save watch attachment to user account & enable autoVoice companion
     try {
       const saved = await api('PUT', '/api/watch', { name: watchName, bleId: device.id || '' });
       if (currentUser) currentUser.watch = saved.watch;
     } catch (e) {}
+
+    SETTINGS.autoVoice = true;
+    saveSettingsLocally();
+    applySettings();
+    refreshAudioOutputDevices();
 
     updateUserChrome();
     $('#watchStatusTitle').textContent = `Connectée : ${watchName}`;
@@ -3366,54 +3554,97 @@ async function sendTextToRealSmartWatch(text, notifyToast = false) {
     .trim();
   if (!clean) return;
 
-  let sent = false;
+  let osSent = false;
+  let bleSent = false;
 
+  // 1. OS Notification Relay -> Watch Screen Mirroring (Samsung/Xiaomi/Huawei/WearOS/Apple)
   if ('Notification' in window && Notification.permission === 'granted') {
-    const opts = { body: clean.slice(0, 180), vibrate: [200, 100, 200], tag: 'nova-watch-' + Date.now(), renotify: true };
+    const opts = {
+      body: clean.slice(0, 200),
+      vibrate: [250, 120, 250],
+      tag: 'nova-watch-' + Date.now(),
+      renotify: true,
+      requireInteraction: false
+    };
     try {
       const reg = await ensureWatchServiceWorker();
       if (reg && typeof reg.showNotification === 'function') {
         await reg.showNotification('NOVA · Ton ami', opts);
-        sent = true;
+        osSent = true;
       } else {
         new Notification('NOVA · Ton ami', opts);
-        sent = true;
+        osSent = true;
       }
-      logWatchEvent('Message affiché via Relais OS sur la montre.', 'ok');
-    } catch (e) {}
+      logWatchEvent('Message envoyé via Relais Notification OS vers la montre.', 'ok');
+    } catch (e) {
+      logWatchEvent('Échec Notification OS : ' + (e?.message || 'bloquée'), 'warn');
+    }
+  } else {
+    updateWatchEnvBanner();
+    logWatchEvent(
+      isEmbeddedIframe()
+        ? 'Notification OS bloquée dans l’aperçu intégré : ouvrez NOVA en plein écran pour afficher sur la montre.'
+        : 'Notifications Chrome non autorisées : cliquez sur « Activer Relais Écran OS ».',
+      'warn'
+    );
   }
 
+  // 2. Direct BLE GATT writes (always attempt regardless of osSent)
   if (bleGattServer && bleGattServer.connected) {
     try {
       const encoder = new TextEncoder();
+      const asciiMsg = toBleSafeAscii(clean) || clean;
+
       if (bleImmediateAlertChar) {
-        try { await bleWritePacket(bleImmediateAlertChar, new Uint8Array([1])); } catch (e) {}
+        try { await bleWritePacket(bleImmediateAlertChar, new Uint8Array([2])); } catch (e) {
+          try { await bleWritePacket(bleImmediateAlertChar, new Uint8Array([1])); } catch (e2) {}
+        }
+      }
+      if (bleAlertControlChar) {
+        try { await bleWritePacket(bleAlertControlChar, new Uint8Array([0x00, 0xff])); } catch (e) {}
       }
       if (bleAlertNotificationChar) {
-        const shortBytes = encoder.encode(clean.slice(0, 18));
-        const pkt = new Uint8Array(2 + shortBytes.length);
-        pkt[0] = 0x05; pkt[1] = 1; pkt.set(shortBytes, 2);
-        await bleWritePacket(bleAlertNotificationChar, pkt);
-        sent = true;
-        logWatchEvent('Affiché sur l’écran BLE (0x2A46).', 'ok');
+        const shortBytes = encoder.encode(asciiMsg.slice(0, 18));
+        for (const cat of [0x05, 0x00]) {
+          try {
+            const pkt = new Uint8Array(2 + shortBytes.length);
+            pkt[0] = cat; pkt[1] = 1; pkt.set(shortBytes, 2);
+            await bleWritePacket(bleAlertNotificationChar, pkt);
+            bleSent = true;
+          } catch (e) {}
+        }
+        if (bleSent) logWatchEvent('Affiché sur l’écran BLE (0x2A46).', 'ok');
       }
       if (bleUartCharacteristic) {
-        await bleWritePacket(bleUartCharacteristic, encoder.encode(clean.slice(0, 180) + '\n'));
-        sent = true;
-        logWatchEvent('Transmis via UART BLE.', 'ok');
+        try {
+          await bleWritePacket(bleUartCharacteristic, encoder.encode(clean.slice(0, 180) + '\n'));
+          bleSent = true;
+          logWatchEvent('Transmis via UART BLE.', 'ok');
+        } catch (e) {}
       }
-      if (!sent && bleWritableCharacteristics.length) {
-        await bleWritePacket(bleWritableCharacteristics[0], encoder.encode(clean.slice(0, 18) + '\n'));
-        sent = true;
+      if (!bleSent && bleWritableCharacteristics.length) {
+        for (const ch of bleWritableCharacteristics.slice(0, 2)) {
+          try {
+            await bleWritePacket(ch, encoder.encode(asciiMsg.slice(0, 20) + '\n'));
+            bleSent = true;
+            logWatchEvent('Paquet transmis sur canal BLE (' + String(ch.uuid).slice(4, 8) + ').', 'ok');
+            break;
+          } catch (e) {}
+        }
       }
     } catch (e) {
       logWatchEvent('Erreur transmission BLE : ' + e.message, 'warn');
     }
   }
-  if (notifyToast && sent) toast('Transmis sur votre montre connectée');
+
+  if (notifyToast) {
+    if (osSent || bleSent) toast('Transmis sur votre montre connectée');
+    else toast('Autorisez les notifications (plein écran) pour afficher sur la montre');
+  }
 }
 
 function startWatchVoiceQuery() {
+  unlockAudioNow();
   if (!requireAccount('Créez un compte pour parler avec votre montre.')) return;
   $('#btPanel')?.classList.add('hide');
   startVoiceRecording(async (spoken, detectedLang) => {
@@ -3425,6 +3656,8 @@ function startWatchVoiceQuery() {
 on('#btBtn', 'click', () => {
   const openBt = () => {
     requestUserLocation(true);
+    updateWatchEnvBanner();
+    refreshAudioOutputDevices();
     $('#btPanel')?.classList.remove('hide');
   };
   if (requireAccount('Créez un compte pour associer votre montre Bluetooth.', openBt)) openBt();
@@ -3433,17 +3666,55 @@ on('#btClose', 'click', () => $('#btPanel')?.classList.add('hide'));
 on('#btScan', 'click', pairSmartWatchBle);
 on('#btnWatchVoiceSearch', 'click', startWatchVoiceQuery);
 on('#btnEnableSysNotif', 'click', async () => {
+  unlockAudioNow();
   await ensureWatchServiceWorker();
+  if (isEmbeddedIframe()) {
+    updateWatchEnvBanner();
+    toast('Ouvrez NOVA en plein écran pour activer les notifications montre.');
+    return;
+  }
   if (!('Notification' in window)) return toast('Notifications non supportées');
   const perm = await Notification.requestPermission();
+  updateWatchEnvBanner();
   if (perm === 'granted') {
-    await sendTextToRealSmartWatch(getAttractiveWatchGreeting(), true);
-    logWatchEvent('Relais OS activé.', 'ok');
+    const greeting = getAttractiveWatchGreeting();
+    await sendTextToRealSmartWatch(greeting, true);
+    speakTextVoice(greeting, null, SETTINGS.voiceLang);
+    logWatchEvent('Relais OS activé et message envoyé.', 'ok');
   } else {
     toast('Autorisation de notification refusée');
   }
 });
+on('#btnTestWatchDelayed', 'click', async () => {
+  unlockAudioNow();
+  const reg = await ensureWatchServiceWorker();
+  if (isEmbeddedIframe()) {
+    updateWatchEnvBanner();
+    return toast('Ouvrez d’abord NOVA en plein écran (hors aperçu).');
+  }
+  if (!('Notification' in window)) return toast('Notifications non supportées');
+  if (Notification.permission !== 'granted') {
+    const perm = await Notification.requestPermission();
+    updateWatchEnvBanner();
+    if (perm !== 'granted') return toast('Autorisez les notifications Chrome.');
+  }
+  const greeting = getAttractiveWatchGreeting();
+  if (reg?.active) {
+    reg.active.postMessage({
+      type: 'NOVA_WATCH_NOTIFY',
+      title: 'NOVA · Ton ami',
+      body: greeting,
+      delayMs: 4000
+    });
+    logWatchEvent('Test programmé dans 4s : verrouillez l’écran du téléphone maintenant !', 'ok');
+    toast('Verrouillez votre téléphone : alerte montre dans 4s !');
+  } else {
+    setTimeout(() => sendTextToRealSmartWatch(greeting, true), 4000);
+    toast('Test montre lancé dans 4s');
+  }
+});
 on('#btnSendCustomToWatch', 'click', () => {
+  unlockAudioNow();
   const val = ($('#watchCustomInput')?.value || '').trim();
   if (!val) return toast('Écrivez un message');
   sendTextToRealSmartWatch(val, true);
